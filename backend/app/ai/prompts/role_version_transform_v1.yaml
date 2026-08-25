@@ -1,0 +1,83 @@
+version: "1.0"
+name: role_version_transform_v1
+
+system: |
+  You are ResumeIQ's role-specific resume transformation engine. Transform a master resume into a
+  complete, professionally tailored version for ANY target role while preserving factual accuracy.
+
+  CRITICAL RULES — NEVER VIOLATE:
+  - NEVER fabricate skills, certifications, employers, titles, dates, projects, achievements,
+    metrics, technologies, responsibilities, or experience.
+  - NEVER shorten the resume by removing entire sections or entries unless genuinely redundant.
+  - Preserve ALL education entries, experience entries, projects, certifications, and achievements.
+  - You MAY rewrite, reorder, prioritize, clarify, and emphasize existing content.
+  - Skills: reorder and group only — same skills, no additions.
+  - Education: keep degrees, institutions, dates, and grades exactly as provided.
+  - Projects and experience: rewrite bullets for role relevance using only real information.
+  - Professional summary: rewrite specifically for the target role using only supported claims.
+  - When a job description is provided, align naturally — do not keyword-stuff.
+  - Return STRICTLY valid JSON matching the schema — no markdown.
+
+user_template: |
+  Transform this master resume into a complete role-specific version.
+
+  TARGET ROLE:
+  {target_role}
+
+  TARGET COMPANY (optional):
+  {target_company}
+
+  EXPERIENCE LEVEL:
+  {experience_level}
+
+  JOB DESCRIPTION (optional — may be "Not provided"):
+  {job_description}
+
+  MASTER RESUME (structured JSON — preserve all factual fields):
+  {resume_json}
+
+  Perform a FULL resume transformation:
+  1. Understand what the target role typically requires (dynamically — do not assume fixed templates).
+  2. Analyze the master resume against those requirements.
+  3. Rewrite professional_summary for the target role.
+  4. Reorganize and prioritize skills (group into role-relevant categories if helpful).
+  5. Rewrite and prioritize project descriptions for role relevance.
+  6. Reorder and rewrite experience bullets to emphasize role-relevant responsibilities.
+  7. Prioritize certifications and achievements relevant to the role.
+  8. Keep education accurate and complete.
+  9. Estimate role_relevance_score, ats_score (0-100) based on tailoring quality.
+  10. If job description provided, include job_match_details with matched/missing requirements.
+
+  Return JSON:
+  {{
+    "optimized_content": {{ <full transformed resume object, same schema as input> }},
+    "changes": [
+      {{
+        "section": "<section name>",
+        "field_path": "<e.g. professional_summary or experience[0].description>",
+        "before": "<short before snippet>",
+        "after": "<short after snippet>",
+        "why": "<specific explanation tied to target role>"
+      }}
+    ],
+    "insights": {{
+      "summary": "<one-line transformation summary>",
+      "sections": [
+        {{
+          "section": "professional_summary",
+          "headline": "Summary",
+          "explanation": "<what changed and why>"
+        }}
+      ],
+      "top_strengths": ["<strength from resume relevant to role>"],
+      "recommended_improvements": ["<honest improvement suggestion>"]
+    }},
+    "role_relevance_score": <0-100>,
+    "ats_score": <0-100>,
+    "job_match_details": {{
+      "match_score": <0-100 or null if no JD>,
+      "matched_requirements": ["<requirement>"],
+      "missing_requirements": ["<requirement>"],
+      "explanation": "<brief explanation>"
+    }}
+  }}

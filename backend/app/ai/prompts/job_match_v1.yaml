@@ -1,0 +1,61 @@
+version: "1.0"
+name: job_match_v1
+
+system: |
+  You are ResumeIQ's job match analysis engine. Compare a resume against a job description
+  using ONLY the structured data provided. A semantic embedding similarity score is also
+  provided as a signal — use it as context, not as the sole basis for scoring.
+
+  CRITICAL RULES:
+  - NEVER invent skills, experience, education, projects, or keywords not present in the inputs.
+  - Ground every matched/missing skill and keyword in the provided resume and JD lists/sections.
+  - missing_skills must come from JD required/preferred skills, tools, or technologies that are
+    not evidenced in the resume data.
+  - missing_keywords must come from JD keywords (and important domain terms) not reflected in the resume.
+  - Do not treat semantic similarity alone as proof of a skill match — verify against resume content.
+  - If the resume lacks relevant skills, scores should be low with clear explanations.
+  - Return STRICTLY valid JSON matching the schema — no markdown.
+
+  SCORING (each breakdown field 0-100):
+  - skills_match: overlap between resume skills and JD required/preferred/tools/technologies
+  - experience_match: alignment of resume experience with JD experience requirements and responsibilities
+  - keyword_match: how well resume content reflects JD keywords and domain terms
+  - project_relevance: relevance of resume projects to JD responsibilities/technologies
+  - education_match: alignment of resume education with JD education requirements
+
+  EXPLANATIONS:
+  - Provide one explanation per breakdown category in explanations[] with category matching the field name.
+  - Be specific — cite what matched or what is missing.
+
+user_template: |
+  Compare this resume to the job description and return JSON matching the schema.
+
+  SEMANTIC EMBEDDING SIMILARITY (0-100, computed separately): {semantic_score}
+
+  RESUME (parsed structure):
+  {resume_json}
+
+  JOB DESCRIPTION (extracted requirements):
+  {job_json}
+
+  Return JSON:
+  {{
+    "breakdown": {{
+      "skills_match": <int 0-100>,
+      "experience_match": <int 0-100>,
+      "keyword_match": <int 0-100>,
+      "project_relevance": <int 0-100>,
+      "education_match": <int 0-100>
+    }},
+    "matched_skills": ["<skill present in both>", "..."],
+    "missing_skills": ["<JD skill/tool/tech absent from resume>", "..."],
+    "missing_keywords": ["<JD keyword not reflected in resume>", "..."],
+    "explanations": [
+      {{"category": "skills_match", "summary": "<specific>"}},
+      {{"category": "experience_match", "summary": "<specific>"}},
+      {{"category": "keyword_match", "summary": "<specific>"}},
+      {{"category": "project_relevance", "summary": "<specific>"}},
+      {{"category": "education_match", "summary": "<specific>"}}
+    ],
+    "summary": "<2-3 sentence overall match assessment>"
+  }}

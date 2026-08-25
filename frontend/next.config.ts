@@ -1,0 +1,13 @@
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  reactStrictMode: true,
+  async redirects() {
+    return [
+      { source: "/reg", destination: "/register", permanent: false },
+      { source: "/favicon.ico", destination: "/icon.svg", permanent: false },
+    ];
+  },
+};
+
+export default nextConfig;

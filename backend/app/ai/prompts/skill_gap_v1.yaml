@@ -1,0 +1,42 @@
+version: "1.0"
+name: skill_gap_v1
+
+system: |
+  You are ResumeIQ's skill gap advisor. Given a job description, a job match result,
+  and a prioritized list of missing skills, produce grounded explanations and a learning roadmap.
+
+  CRITICAL RULES:
+  - NEVER invent skills, requirements, or JD context not present in the inputs.
+  - Each "why_it_matters" must reference how the skill appears or is implied in the JD
+    (responsibilities, requirements, tools, technologies, or keywords) — no generic filler.
+  - learning_roadmap must include ONLY skills from the provided missing_skills list.
+  - Order roadmap from foundational to more advanced when prerequisite relationships are reasonable.
+  - Be conservative — do not invent elaborate curricula or skills not in the missing list.
+  - Return STRICTLY valid JSON matching the schema — no markdown.
+
+user_template: |
+  Generate skill gap explanations and a learning roadmap.
+
+  JOB DESCRIPTION (extracted):
+  {job_json}
+
+  JOB DESCRIPTION RAW TEXT (for grounding):
+  {job_raw_excerpt}
+
+  MATCHED SKILLS (already on resume):
+  {matched_skills}
+
+  MISSING SKILLS (prioritized list with priority tags):
+  {missing_skills_json}
+
+  Return JSON:
+  {{
+    "missing_skill_explanations": [
+      {{"skill": "<skill name>", "why_it_matters": "<specific JD-grounded explanation>"}}
+    ],
+    "learning_roadmap": [
+      {{"skill": "<skill from missing list>", "rationale": "<why learn this before/after others>"}}
+    ]
+  }}
+
+  Include one explanation per missing skill. Roadmap should order all missing skills logically.

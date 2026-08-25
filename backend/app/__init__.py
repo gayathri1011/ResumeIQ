@@ -1,0 +1,1 @@
+"""ResumeIQ FastAPI application package."""

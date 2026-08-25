@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ personal.name if personal else "Resume" }}</title>
+  <style>
+    /* ATS-friendly: single column, no tables, no floats, no images */
+    * { box-sizing: border-box; }
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.45;
+      color: #111111;
+      margin: 0;
+      padding: 0;
+    }
+    h1 {
+      font-size: 20pt;
+      font-weight: 700;
+      margin: 0 0 4px 0;
+      letter-spacing: 0.02em;
+    }
+    .contact {
+      font-size: 9.5pt;
+      color: #333333;
+      margin: 0 0 2px 0;
+    }
+    .contact a {
+      color: #111111;
+      text-decoration: none;
+    }
+    h2 {
+      font-size: 11pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid #222222;
+      margin: 14px 0 6px 0;
+      padding-bottom: 2px;
+    }
+    .summary {
+      margin: 8px 0 0 0;
+    }
+    .entry {
+      margin: 0 0 10px 0;
+    }
+    .entry-header {
+      display: block;
+      margin: 0 0 2px 0;
+    }
+    .entry-title {
+      font-weight: 700;
+    }
+    .entry-org {
+      font-weight: 400;
+    }
+    .entry-date {
+      font-size: 9.5pt;
+      color: #333333;
+      margin: 0 0 3px 0;
+    }
+    ul {
+      margin: 2px 0 0 18px;
+      padding: 0;
+    }
+    li {
+      margin: 0 0 2px 0;
+    }
+    .skills-line {
+      margin: 4px 0 0 0;
+    }
+    .link-list {
+      margin: 4px 0 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    .link-list li {
+      margin: 0 0 2px 0;
+    }
+  </style>
+</head>
+<body>
+  {% if personal %}
+  <header>
+    <h1>{{ personal.name }}</h1>
+    {% if personal.contact_line %}
+    <p class="contact">{{ personal.contact_line }}</p>
+    {% endif %}
+    {% if personal.links %}
+    <ul class="link-list">
+      {% for link in personal.links %}
+      <li><a href="{{ link.url }}">{{ link.label }}</a></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </header>
+  {% endif %}
+
+  {% if summary %}
+  <section>
+    <h2>Professional Summary</h2>
+    <p class="summary">{{ summary }}</p>
+  </section>
+  {% endif %}
+
+  {% if experience %}
+  <section>
+    <h2>Experience</h2>
+    {% for entry in experience %}
+    <div class="entry">
+      <p class="entry-header">
+        {% if entry.title %}<span class="entry-title">{{ entry.title }}</span>{% endif %}
+        {% if entry.organization %}<span class="entry-org">{% if entry.title %} — {% endif %}{{ entry.organization }}</span>{% endif %}
+      </p>
+      {% if entry.date_range %}<p class="entry-date">{{ entry.date_range }}</p>{% endif %}
+      {% if entry.bullets %}
+      <ul>
+        {% for bullet in entry.bullets %}
+        <li>{{ bullet }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if education %}
+  <section>
+    <h2>Education</h2>
+    {% for entry in education %}
+    <div class="entry">
+      <p class="entry-header">
+        {% if entry.title %}<span class="entry-title">{{ entry.title }}</span>{% endif %}
+        {% if entry.organization %}<span class="entry-org">{% if entry.title %} — {% endif %}{{ entry.organization }}</span>{% endif %}
+      </p>
+      {% if entry.date_range %}<p class="entry-date">{{ entry.date_range }}</p>{% endif %}
+      {% if entry.bullets %}
+      <ul>
+        {% for bullet in entry.bullets %}
+        <li>{{ bullet }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if projects %}
+  <section>
+    <h2>Projects</h2>
+    {% for entry in projects %}
+    <div class="entry">
+      {% if entry.title %}<p class="entry-header"><span class="entry-title">{{ entry.title }}</span></p>{% endif %}
+      {% if entry.bullets %}
+      <ul>
+        {% for bullet in entry.bullets %}
+        <li>{{ bullet }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if skills %}
+  <section>
+    <h2>Skills</h2>
+    <p class="skills-line">{{ skills | join(", ") }}</p>
+  </section>
+  {% endif %}
+
+  {% if certifications %}
+  <section>
+    <h2>Certifications</h2>
+    {% for entry in certifications %}
+    <div class="entry">
+      <p class="entry-header">
+        {% if entry.title %}<span class="entry-title">{{ entry.title }}</span>{% endif %}
+        {% if entry.organization %}<span class="entry-org">{% if entry.title %} — {% endif %}{{ entry.organization }}</span>{% endif %}
+      </p>
+      {% if entry.date_range %}<p class="entry-date">{{ entry.date_range }}</p>{% endif %}
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if achievements %}
+  <section>
+    <h2>Achievements</h2>
+    <ul>
+      {% for item in achievements %}
+      <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if links %}
+  <section>
+    <h2>Links</h2>
+    <ul class="link-list">
+      {% for link in links %}
+      <li><a href="{{ link.url }}">{{ link.label }}: {{ link.url }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+</body>
+</html>
