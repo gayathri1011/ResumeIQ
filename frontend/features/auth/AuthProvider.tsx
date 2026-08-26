@@ -19,6 +19,7 @@ interface AuthContextValue {
   user: UserProfile | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  setAuthenticatedUser: (profile: UserProfile) => void;
   refreshUser: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -32,6 +33,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const setAuthenticatedUser = useCallback((profile: UserProfile) => {
+    setUser(profile);
+  }, []);
 
   const refreshUser = useCallback(async () => {
     const token = getAccessToken();
@@ -50,6 +55,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     void (async () => {
+      // Public auth pages should not wait on a cold backend when there is no token.
+      if (!getAccessToken()) {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
       setIsLoading(true);
       await refreshUser();
       setIsLoading(false);
@@ -80,10 +91,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       isLoading,
       isAuthenticated: Boolean(user && getAccessToken()),
+      setAuthenticatedUser,
       refreshUser,
       logout,
     }),
-    [user, isLoading, refreshUser, logout],
+    [user, isLoading, setAuthenticatedUser, refreshUser, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

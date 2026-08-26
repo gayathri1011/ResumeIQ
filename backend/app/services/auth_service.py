@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from app.core.database import MongoSession
 
 from app.core.exceptions import AppError
@@ -24,9 +26,10 @@ class AuthService:
                 status_code=409,
             )
 
+        password_hash = await asyncio.to_thread(hash_password, body.password)
         user = await self.user_repo.create(
             email=body.email.lower(),
-            password_hash=hash_password(body.password),
+            password_hash=password_hash,
             full_name=body.full_name,
         )
         token, expires_in = create_access_token(user.id)
@@ -39,7 +42,14 @@ class AuthService:
 
     async def login(self, body: LoginRequest) -> dict:
         user = await self.user_repo.get_by_email(body.email.lower())
-        if user is None or not verify_password(body.password, user.password_hash):
+        password_ok = False
+        if user is not None:
+            password_ok = await asyncio.to_thread(
+                verify_password,
+                body.password,
+                user.password_hash,
+            )
+        if user is None or not password_ok:
             raise AppError(
                 "Invalid email or password.",
                 code="invalid_credentials",

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   Briefcase,
-  Sparkles,
   Upload,
   Wand2,
 } from "lucide-react";
@@ -36,13 +35,6 @@ const ACTIONS = [
     icon: Briefcase,
   },
   {
-    key: "optimize",
-    label: "Optimize Resume",
-    description: "Review AI optimization proposals",
-    href: "/resumes/optimize/review",
-    icon: Sparkles,
-  },
-  {
     key: "improve",
     label: "Improve Bullets",
     description: "AI rewrite for individual resume bullets",
@@ -54,7 +46,6 @@ const ACTIONS = [
 const VERSION_SCOPED_KEYS = new Set([
   "analyze_job",
   "improve",
-  "optimize",
 ]);
 
 export function QuickActions({ resumeId, versionId }: QuickActionsProps) {

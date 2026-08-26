@@ -139,19 +139,11 @@ export function Dashboard() {
                 ) : null}
                 {status === "no_analysis" ? "Run analysis" : "Re-analyze"}
               </Button>
-              <Button variant="outline" asChild>
-                <Link
-                  href={
-                    status === "no_analysis"
-                      ? "/resumes/upload"
-                      : `/resumes/optimize/review?resumeId=${resume.id}`
-                  }
-                >
-                  {status === "no_analysis"
-                    ? "Upload another"
-                    : "Review optimization"}
-                </Link>
-              </Button>
+              {status === "no_analysis" ? (
+                <Button variant="outline" asChild>
+                  <Link href="/resumes/upload">Upload another</Link>
+                </Button>
+              ) : null}
               {errorMessage ? (
                 <p className="w-full text-sm text-destructive">{errorMessage}</p>
               ) : null}

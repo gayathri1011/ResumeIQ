@@ -32,7 +32,6 @@ import { listResumes } from "@/services/analysis.service";
 import {
   improveBullet,
   listResumeBullets,
-  replaceBullet,
 } from "@/services/bullet.service";
 import type { ResumeListItem } from "@/types/analysis";
 import type {
@@ -57,7 +56,6 @@ export function BulletImprover() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<ImproveBulletResponse | null>(null);
   const [copied, setCopied] = useState(false);
-  const [replacePending, setReplacePending] = useState(false);
 
   const targetRole = useMemo(
     () => (selectedResumeId ? loadTargetRole(selectedResumeId) : ""),
@@ -146,46 +144,6 @@ export function BulletImprover() {
       setErrorMessage("Could not copy to clipboard.");
     }
   }, [result]);
-
-  const handleReplace = useCallback(async () => {
-    if (!result || !selectedBullet || !selectedResumeId) return;
-
-    const confirmed = window.confirm(
-      "Replace the original bullet in your saved resume with the improved version? This updates your stored resume content.",
-    );
-    if (!confirmed) return;
-
-    setReplacePending(true);
-    setErrorMessage(null);
-
-    try {
-      await replaceBullet({
-        resume_id: selectedResumeId,
-        resume_version_id: versionIdParam,
-        section: selectedBullet.section,
-        entry_index: selectedBullet.entry_index,
-        bullet_index: selectedBullet.bullet_index,
-        improved_text: result.improved_text,
-      });
-
-      const refreshed = await listResumeBullets(selectedResumeId, versionIdParam);
-      setBullets(refreshed);
-      const updated = refreshed.find(
-        (item) =>
-          item.section === selectedBullet.section &&
-          item.entry_index === selectedBullet.entry_index &&
-          item.bullet_index === selectedBullet.bullet_index,
-      );
-      if (updated) {
-        setSelectedBullet(updated);
-      }
-    } catch (error) {
-      const message = getUserFriendlyErrorMessage(error, "Could not save the improved bullet.");
-      setErrorMessage(message);
-    } finally {
-      setReplacePending(false);
-    }
-  }, [result, selectedBullet, selectedResumeId, versionIdParam]);
 
   return (
     <AppShell>
@@ -277,7 +235,7 @@ export function BulletImprover() {
           <CardHeader>
             <CardTitle className="text-base">Before / After</CardTitle>
             <CardDescription>
-              Review the rewrite before copying or replacing.
+              Review the rewrite, then copy it if you want to use it.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -375,20 +333,6 @@ export function BulletImprover() {
                             <Copy className="mr-2 h-4 w-4" />
                             Copy
                           </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        onClick={() => void handleReplace()}
-                        disabled={replacePending}
-                      >
-                        {replacePending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Saving…
-                          </>
-                        ) : (
-                          "Replace in resume"
                         )}
                       </Button>
                     </>

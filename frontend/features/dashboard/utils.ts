@@ -79,12 +79,12 @@ export function fixActionLabel(category: string): string {
     return "Open bullet improver";
   }
   if (key.includes("skill")) {
-    return "Open skill optimizer (coming soon)";
+    return "Review skills on dashboard";
   }
   if (key.includes("ats") || key.includes("format")) {
-    return "Open ATS optimizer (coming soon)";
+    return "Review ATS tips on dashboard";
   }
-  return "Open resume improver (coming soon)";
+  return "Open bullet improver";
 }
 
 const TARGET_ROLE_STORAGE_KEY = "resumeiq-target-role";

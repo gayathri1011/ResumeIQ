@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 export function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { refreshUser } = useAuth();
+  const { setAuthenticatedUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
@@ -37,13 +37,16 @@ export function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      await login({ email: email.trim(), password });
-      await refreshUser();
+      const response = await login({ email: email.trim(), password });
+      setAuthenticatedUser(response.user);
       const next = getSafeNextPath(searchParams.get("next"));
       router.replace(next);
     } catch (error) {
       setErrorMessage(
-        getUserFriendlyErrorMessage(error, "Could not log in. Please try again."),
+        getUserFriendlyErrorMessage(
+          error,
+          "Could not log in. If this is the first request in a while, wait for the server to wake up and try again.",
+        ),
       );
     } finally {
       setIsSubmitting(false);
@@ -142,7 +145,7 @@ export function LoginPage() {
         {errorMessage ? <Alert variant="error">{errorMessage}</Alert> : null}
 
         <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-          {isSubmitting ? "Signing in…" : "Log in →"}
+          {isSubmitting ? "Signing in… (may take up to 1 min)" : "Log in →"}
         </Button>
       </form>
     </AuthShell>

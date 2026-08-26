@@ -11,9 +11,15 @@ import jwt
 from app.core.config import settings
 from app.core.exceptions import AppError
 
+# Cost 10 is still strong for this app and hashes ~2-3x faster than default 12.
+_BCRYPT_ROUNDS = 10
+
 
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    return bcrypt.hashpw(
+        password.encode("utf-8"),
+        bcrypt.gensalt(rounds=_BCRYPT_ROUNDS),
+    ).decode("utf-8")
 
 
 def verify_password(plain_password: str, password_hash: str) -> bool:

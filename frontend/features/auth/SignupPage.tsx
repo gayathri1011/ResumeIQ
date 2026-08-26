@@ -15,7 +15,7 @@ import { signup } from "@/services/auth.service";
 
 export function SignupPage() {
   const router = useRouter();
-  const { refreshUser } = useAuth();
+  const { setAuthenticatedUser } = useAuth();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,18 +42,18 @@ export function SignupPage() {
 
     setIsSubmitting(true);
     try {
-      await signup({
+      const response = await signup({
         email: email.trim(),
         password,
         full_name: fullName.trim() || null,
       });
-      await refreshUser();
+      setAuthenticatedUser(response.user);
       router.replace("/dashboard");
     } catch (error) {
       setErrorMessage(
         getUserFriendlyErrorMessage(
           error,
-          "Could not create your account. Please try again.",
+          "Could not create your account. If this is the first request in a while, wait for the server to wake up and try again.",
         ),
       );
     } finally {
@@ -159,7 +159,7 @@ export function SignupPage() {
         {errorMessage ? <Alert variant="error">{errorMessage}</Alert> : null}
 
         <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-          {isSubmitting ? "Creating account…" : "Sign up →"}
+          {isSubmitting ? "Creating account… (may take up to 1 min)" : "Sign up →"}
         </Button>
       </form>
     </AuthShell>

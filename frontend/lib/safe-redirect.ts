@@ -4,7 +4,6 @@ const EXACT_PATHS = new Set([
   "/dashboard",
   "/register",
   "/resumes/upload",
-  "/resumes/optimize/review",
   "/jobs/analyze",
   "/bullets/improve",
 ]);

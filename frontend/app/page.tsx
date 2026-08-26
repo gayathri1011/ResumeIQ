@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, FileSearch, Sparkles, Target } from "lucide-react";
+import { ArrowRight, FileSearch, Target, Wand2 } from "lucide-react";
 
 import {
   BrandLockup,
@@ -28,10 +28,10 @@ const FEATURES = [
     icon: Target,
   },
   {
-    title: "AI optimization",
+    title: "Bullet improvement",
     description:
-      "Role-targeted improvements with explainable before/after review.",
-    icon: Sparkles,
+      "Rewrite individual resume bullets with clearer, role-aware language.",
+    icon: Wand2,
   },
 ] as const;
 
@@ -74,8 +74,8 @@ export default function HomePage() {
             <OrnamentDivider />
             <p className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
               Upload your resume, understand your health score, match against
-              real job descriptions, and optimize with explainable AI — all in
-              one focused workspace.
+              real job descriptions, and improve bullets with explainable AI —
+              all in one focused workspace.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3 fade-up fade-up-delay-1">
