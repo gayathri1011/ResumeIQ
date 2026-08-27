@@ -33,6 +33,11 @@ class Settings(BaseSettings):
         default="http://localhost:3000,http://localhost:3001",
         alias="CORS_ORIGINS",
     )
+    # Matches Vercel production + preview URLs (https://*.vercel.app)
+    cors_origin_regex: str = Field(
+        default=r"https://([a-z0-9-]+\.)+vercel\.app",
+        alias="CORS_ORIGIN_REGEX",
+    )
 
     # JWT / Auth (later phases)
     jwt_secret_key: str = Field(default="change-me", alias="JWT_SECRET_KEY")

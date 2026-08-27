@@ -8,3 +8,5 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.8"
+      - key: CORS_ORIGIN_REGEX
+        value: "https://([a-z0-9-]+\\.)+vercel\\.app"
