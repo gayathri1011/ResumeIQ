@@ -26,7 +26,7 @@ import { QuickActions } from "@/features/dashboard/QuickActions";
 import { ScoreCountUp } from "@/features/dashboard/ScoreCountUp";
 import { TargetRoleField } from "@/features/dashboard/TargetRoleField";
 import { useDashboard } from "@/features/dashboard/useDashboard";
-import { formatDateTime, getGreeting } from "@/features/dashboard/utils";
+import { getGreeting } from "@/features/dashboard/utils";
 import { WhyThisScoreDialog } from "@/features/dashboard/WhyThisScoreDialog";
 import { DownloadPdfButton } from "@/features/versions/DownloadPdfButton";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -205,9 +205,6 @@ export function Dashboard() {
               <CardContent className="space-y-3 text-sm">
                 <div>
                   <p className="font-medium">{displayName}</p>
-                  <p className="text-muted-foreground">
-                    Uploaded {formatDateTime(resume.created_at)}
-                  </p>
                 </div>
                 {resumes.length > 1 ? (
                   <div className="space-y-2">
@@ -226,19 +223,11 @@ export function Dashboard() {
                     </select>
                   </div>
                 ) : null}
-                <div className="grid grid-cols-2 gap-3 border-t border-border/60 pt-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Last analyzed</p>
-                    <p className="font-medium">
-                      {formatDateTime(analysis?.analyzed_at)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Latest score</p>
-                    <p className="font-medium tabular-nums">
-                      {overallScore !== null ? `${overallScore} / 100` : "—"}
-                    </p>
-                  </div>
+                <div className="border-t border-border/60 pt-3">
+                  <p className="text-xs text-muted-foreground">Latest score</p>
+                  <p className="font-medium tabular-nums">
+                    {overallScore !== null ? `${overallScore} / 100` : "—"}
+                  </p>
                 </div>
               </CardContent>
             </Card>

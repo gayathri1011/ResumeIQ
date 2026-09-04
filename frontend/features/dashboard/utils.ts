@@ -18,18 +18,7 @@ const ISSUE_CATEGORY_MAP: Record<string, string[]> = {
 };
 
 export function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
-export function formatDateTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
+  return "Welcome";
 }
 
 export function getCategoryScore(
