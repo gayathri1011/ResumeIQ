@@ -29,9 +29,8 @@ ResumeIQ is an AI-assisted resume intelligence web application. A signed-in user
 5. **Parse & structure** — text extraction (PyMuPDF / python-docx / RapidOCR), then **heuristic section structuring** (not an LLM structuring step at upload). A **Master Resume** version is created (`is_master=True`)  
 6. **Analyze** — dashboard Analyze calls the backend; the LLM returns overall score, dimension scores with explanations, and grounded issues  
 7. **Optional job flow** (`/jobs/analyze`) — paste JD text → AI extracts title, required/preferred skills, tools, responsibilities, keywords, etc. → match against a selected resume → skill-gap panel (coverage, missing skills, learning roadmap)  
-8. **Bullet improver** (`/bullets/improve`) — pick a bullet → AI rewrite (with anti-fabrication checks) → optional **Replace** into the resume version  
-9. **Optimize for a target role** (`/resumes/optimize/review`) — target role (stored in browser localStorage per resume; optional JD grounding) → AI proposes section changes with reasons → accept/reject → apply updates live content; a draft optimization version is also created server-side  
-10. **Download PDF** — from the dashboard via backend HTML→PDF generation  
+8. **Optimize for a target role** (`/resumes/optimize/review`) — target role (stored in browser localStorage per resume; optional JD grounding) → AI proposes section changes with reasons → accept/reject → apply updates live content; a draft optimization version is also created server-side
+9. **Download PDF** — from the dashboard via backend HTML→PDF generation
 
 ### Role-specific versions — accuracy note
 
@@ -108,7 +107,6 @@ Embeddings allow comparison of **meaning** between resume and JD text, not only 
 
 ### F. AI content improvement
 
-- Single-bullet improvement with optional regenerate  
 - Replace improved bullet into resume content  
 - Full-resume optimization proposals with before/after and “why” notes  
 - Accept / reject (and bulk actions) then apply  
@@ -191,7 +189,7 @@ Embeddings allow comparison of **meaning** between resume and JD text, not only 
 | Embedding model | **`nomic-embed-text-v1_5`** |
 | Optional | `AI_PROVIDER=openai`; `AI_MOCK_MODE=true` for deterministic mocks |
 
-LLM-backed tasks: resume analysis, job description analysis, job matching breakdown, skill-gap enrichment, bullet improvement, resume optimization, role-version transformation (backend).
+LLM-backed tasks: resume analysis, job description analysis, job matching breakdown, skill-gap enrichment, resume optimization, role-version transformation (backend).
 
 Chat inference runs on **Groq’s cloud**, not on a local GPU in this repo.
 
@@ -334,7 +332,7 @@ You see a match score, breakdown categories, matched and missing skills/keywords
 
 ### Step 6 — Improve content or optimize for a role
 
-Use Bullet improver for one line at a time, or Optimize to generate role-focused changes, accept or reject each change, and apply.
+Use Optimize to generate role-focused changes, accept or reject each change, and apply.
 
 ### Step 7 — Download
 

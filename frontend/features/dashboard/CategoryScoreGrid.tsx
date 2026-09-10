@@ -131,7 +131,6 @@ export function CategoryScoreGrid({ analysis, jobMatch, resumeId }: CategoryScor
           score={dialogScope.score}
           explanation={dialogScope.explanation}
           analysis={analysis}
-          resumeId={resumeId}
         />
       )}
     </>

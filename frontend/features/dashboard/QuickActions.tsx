@@ -1,9 +1,5 @@
 import Link from "next/link";
-import {
-  Briefcase,
-  Upload,
-  Wand2,
-} from "lucide-react";
+import { Briefcase, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -34,19 +30,9 @@ const ACTIONS = [
     href: "/jobs/analyze",
     icon: Briefcase,
   },
-  {
-    key: "improve",
-    label: "Improve Bullets",
-    description: "AI rewrite for individual resume bullets",
-    href: "/bullets/improve",
-    icon: Wand2,
-  },
 ] as const;
 
-const VERSION_SCOPED_KEYS = new Set([
-  "analyze_job",
-  "improve",
-]);
+const VERSION_SCOPED_KEYS = new Set(["analyze_job"]);
 
 export function QuickActions({ resumeId, versionId }: QuickActionsProps) {
   return (

@@ -9,7 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.ai.schemas.bullet_output import extract_quantifiers, find_fabricated_metrics
+from app.ai.schemas.metric_validation import extract_quantifiers, find_fabricated_metrics
 from app.parsers.schema import ParsedResumeStructure
 
 STRUCTURAL_ENTRY_SECTIONS = ("experience", "education", "projects", "certifications")

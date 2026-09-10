@@ -261,7 +261,6 @@ export function Dashboard() {
             score={overallScore}
             explanation={analysis.summary}
             analysis={analysis}
-            resumeId={resume.id}
           />
         ) : null}
       </motion.div>

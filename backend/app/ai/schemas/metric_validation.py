@@ -1,25 +1,11 @@
-"""Pydantic schemas for AI bullet improvement output."""
+"""Shared metric validation helpers for AI-generated resume content."""
 
 from __future__ import annotations
 
 import re
 
-from pydantic import BaseModel, Field, field_validator
-
 METRIC_PLACEHOLDER_PATTERN = re.compile(r"\[add [^\]]+\]", re.IGNORECASE)
 NUMBER_PATTERN = re.compile(r"\b\d+(?:\.\d+)?%?\b")
-
-
-class BulletImprovementOutput(BaseModel):
-    improved_text: str = Field(min_length=1)
-    changes_summary: str = Field(min_length=1)
-    metric_placeholder_used: bool = False
-    suggested_metric_prompt: str | None = None
-
-    @field_validator("improved_text", "changes_summary")
-    @classmethod
-    def strip_text(cls, value: str) -> str:
-        return value.strip()
 
 
 def extract_quantifiers(text: str) -> set[str]:

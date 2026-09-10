@@ -65,7 +65,7 @@ export function scoreStrokeColor(score: number): string {
 export function fixActionLabel(category: string): string {
   const key = category.toLowerCase();
   if (key.includes("experience") || key.includes("project")) {
-    return "Open bullet improver";
+    return "Review resume content";
   }
   if (key.includes("skill")) {
     return "Review skills on dashboard";
@@ -73,7 +73,7 @@ export function fixActionLabel(category: string): string {
   if (key.includes("ats") || key.includes("format")) {
     return "Review ATS tips on dashboard";
   }
-  return "Open bullet improver";
+  return "Review resume content";
 }
 
 const TARGET_ROLE_STORAGE_KEY = "resumeiq-target-role";

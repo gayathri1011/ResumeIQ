@@ -56,7 +56,6 @@ class AIServiceName(str, enum.Enum):
     JOB_MATCHER = "job_matcher"
     RESUME_OPTIMIZER = "resume_optimizer"
     ROLE_VERSION_TRANSFORMER = "role_version_transformer"
-    BULLET_IMPROVER = "bullet_improver"
     EMBEDDING = "embedding"
 
 
@@ -68,4 +67,3 @@ class AIResultType(str, enum.Enum):
     MATCH_DETAILS = "match_details"
     OPTIMIZATION = "optimization"
     ROLE_TRANSFORMATION = "role_transformation"
-    BULLET_IMPROVEMENT = "bullet_improvement"

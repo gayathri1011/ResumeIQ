@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +26,6 @@ interface WhyThisScoreDialogProps {
   score: number | null;
   explanation: string | null;
   analysis: ResumeAnalysis;
-  resumeId?: string;
 }
 
 export function WhyThisScoreDialog({
@@ -38,20 +36,10 @@ export function WhyThisScoreDialog({
   score,
   explanation,
   analysis,
-  resumeId,
 }: WhyThisScoreDialogProps) {
   const issues = getIssuesForScope(analysis.issues, scopeKey);
   const summary =
     scopeKey === "overall" ? analysis.summary : explanation ?? analysis.summary;
-
-  const isBulletIssue = (category: string) => {
-    const key = category.toLowerCase();
-    return key.includes("experience") || key.includes("project");
-  };
-
-  const bulletImproverHref = resumeId
-    ? `/bullets/improve?resumeId=${resumeId}`
-    : "/bullets/improve";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -100,23 +88,17 @@ export function WhyThisScoreDialog({
                         {issue.suggested_fix}
                       </p>
                     )}
-                    {isBulletIssue(issue.category) ? (
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={bulletImproverHref}>{fixActionLabel(issue.category)}</Link>
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          window.alert(
-                            `${fixActionLabel(issue.category)} — this guided fix flow ships in a later phase.`,
-                          )
-                        }
-                      >
-                        Fix this
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        window.alert(
+                          `${fixActionLabel(issue.category)} — this guided fix flow ships in a later phase.`,
+                        )
+                      }
+                    >
+                      Fix this
+                    </Button>
                   </motion.li>
                 );
               })}

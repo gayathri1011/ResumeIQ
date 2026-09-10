@@ -5,10 +5,9 @@ const EXACT_PATHS = new Set([
   "/register",
   "/resumes/upload",
   "/jobs/analyze",
-  "/bullets/improve",
 ]);
 
-const PREFIX_PATHS = ["/dashboard?", "/resumes/", "/jobs/", "/bullets/"];
+const PREFIX_PATHS = ["/dashboard?", "/resumes/", "/jobs/"];
 
 export function getSafeNextPath(next: string | null | undefined): string {
   if (!next || !next.startsWith("/") || next.startsWith("//")) {

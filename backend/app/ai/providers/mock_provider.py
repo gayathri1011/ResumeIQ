@@ -265,79 +265,9 @@ def _build_valid_resume_optimize_output(messages: list[dict[str, str]] | None = 
     return {"optimized_content": optimized, "changes": changes}
 
 
-def _is_bullet_improve_prompt(messages: list[dict[str, str]] | None) -> bool:
-    if not messages:
-        return False
-    combined = " ".join(message.get("content", "") for message in messages).lower()
-    return "resume bullet improver" in combined or "improve this resume bullet" in combined
-
-
-def _extract_original_bullet(user_text: str) -> str:
-    marker = "ORIGINAL BULLET:"
-    if marker not in user_text:
-        return user_text
-    section = user_text.split(marker, 1)[1]
-    for stop in ("RESUME CONTEXT", "TARGET ROLE", "REGENERATE MODE"):
-        if stop in section:
-            section = section.split(stop, 1)[0]
-    return section.strip()
-
-
-def _build_valid_bullet_output(messages: list[dict[str, str]] | None = None) -> dict[str, object]:
-    user_text = ""
-    if messages:
-        user_text = messages[-1].get("content", "")
-
-    if "FABRICATE_METRIC_TEST" in user_text:
-        return {
-            "improved_text": "Improved API performance by 40% through backend optimization.",
-            "changes_summary": "Added fabricated metric for testing.",
-            "metric_placeholder_used": False,
-            "suggested_metric_prompt": None,
-        }
-
-    original = _extract_original_bullet(user_text)
-    regenerate = "regenerate mode: true" in user_text.lower()
-    has_metrics = any(char.isdigit() for char in original)
-
-    if regenerate:
-        improved_text = (
-            "Owned backend API development end-to-end, partnering with product "
-            "to deliver reliable services."
-        )
-        changes_summary = "Varied structure and emphasized ownership for a fresh rewrite."
-    elif has_metrics:
-        improved_text = (
-            "Designed and maintained backend APIs, preserving the original scope "
-            "and measurable outcomes."
-        )
-        changes_summary = "Strengthened the action verb and clarified delivery scope."
-    else:
-        improved_text = (
-            "Designed and maintained backend APIs with clear ownership of implementation "
-            "[add measurable outcome, e.g. % improvement or team size]."
-        )
-        changes_summary = (
-            "Strengthened the action verb and clarified scope without inventing metrics."
-        )
-
-    return {
-        "improved_text": improved_text,
-        "changes_summary": changes_summary,
-        "metric_placeholder_used": not has_metrics,
-        "suggested_metric_prompt": (
-            "Add a real metric such as request volume, latency improvement, or team size."
-            if not has_metrics
-            else None
-        ),
-    }
-
-
 def _resolve_mock_output(messages: list[dict[str, str]] | None) -> dict[str, object]:
     if _is_resume_optimize_prompt(messages):
         return _build_valid_resume_optimize_output(messages)
-    if _is_bullet_improve_prompt(messages):
-        return _build_valid_bullet_output(messages)
     if _is_skill_gap_prompt(messages):
         return _build_valid_skill_gap_output(messages)
     if _is_job_match_prompt(messages):
@@ -369,8 +299,6 @@ class MockAIProvider:
             bad = _resolve_mock_output(messages)
             if _is_resume_optimize_prompt(messages):
                 bad["optimized_content"] = {}
-            elif _is_bullet_improve_prompt(messages):
-                bad["improved_text"] = ""
             elif _is_skill_gap_prompt(messages):
                 bad["missing_skill_explanations"] = "not-a-list"
             elif _is_job_match_prompt(messages):

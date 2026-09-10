@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  Sparkles,
   Upload,
   X,
 } from "lucide-react";
@@ -23,7 +22,6 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/resumes/upload", label: "Upload", icon: Upload },
   { href: "/jobs/analyze", label: "Job match", icon: Briefcase },
-  { href: "/bullets/improve", label: "Bullets", icon: Sparkles },
 ] as const;
 
 interface AppShellProps {

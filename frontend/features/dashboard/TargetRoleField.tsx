@@ -28,7 +28,7 @@ export function TargetRoleField({ resumeId }: TargetRoleFieldProps) {
       <CardHeader>
         <CardTitle className="text-base">Target role</CardTitle>
         <CardDescription>
-          Saved locally — used when improving bullets for a target role
+          Saved locally — used when optimizing your resume for a target role
         </CardDescription>
       </CardHeader>
       <CardContent>

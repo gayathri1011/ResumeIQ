@@ -8,13 +8,13 @@ ResumeIQ is a full-stack SaaS application that helps job seekers understand how 
 
 ## Project Overview
 
-Job seekers often lack feedback on **why** an ATS might score their resume poorly, which keywords or skills are missing for a role, and how to improve bullets without inventing experience. ResumeIQ solves this by:
+Job seekers often lack feedback on **why** an ATS might score their resume poorly and which keywords or skills are missing for a role. ResumeIQ solves this by:
 
 1. Parsing uploaded PDF/DOCX resumes into a structured schema
 2. Running AI-powered resume health analysis with per-dimension scores and “Why this score?” explainability
 3. Analyzing pasted job descriptions and matching them semantically + structurally against the resume
 4. Surfacing skill/keyword gaps and actionable improvement paths
-5. Letting users improve individual bullets, run role-targeted optimization with accept/reject review, and export a polished PDF
+5. Letting users run role-targeted optimization with accept/reject review and export a polished PDF
 
 Every AI feature is tied to **actual resume/JD content** — the system validates outputs and rejects hallucinated metrics or invented employers/dates.
 
@@ -32,7 +32,6 @@ Every AI feature is tied to **actual resume/JD content** — the system validate
 | **Job descriptions** | Paste JD text → AI extraction of title, skills, responsibilities, keywords |
 | **Job matching** | Semantic embedding similarity + AI breakdown (skills, experience, keywords, projects, education) |
 | **Skill gap** | Missing skills/keywords, learning roadmap; recommendations persisted to DB |
-| **Bullet improver** | Single-bullet rewrite with metric-fabrication checks |
 | **Optimization** | Role- or JD-grounded full-resume optimization with per-change accept/reject |
 | **Before/after** | Section-by-section comparison in optimization review |
 | **Versions** | List, duplicate, upload new version, analyze/optimize per version, delete |
@@ -109,10 +108,9 @@ Every AI feature is tied to **actual resume/JD content** — the system validate
 4. **Job analyzer** → paste JD → AI extracts requirements → store `job_descriptions`
 5. **Match** → link resume version to JD → combined semantic + structured match score
 6. **Skill gap** → missing skills/keywords + roadmap (recommendations saved internally)
-7. **Bullet improver** → pick a bullet → AI rewrite → **Replace** updates version content
-8. **Optimize** → target role (+ optional JD) → review changes → accept/reject → apply to version
-9. **Versions** → duplicate, compare status, re-analyze when stale
-10. **Generate PDF** → download current version
+7. **Optimize** → target role (+ optional JD) → review changes → accept/reject → apply to version
+8. **Versions** → duplicate, compare status, re-analyze when stale
+9. **Generate PDF** → download current version
 
 **Staleness:** When content changes (bullet replace, optimization apply), `_meta.content_updated_at` is updated and analysis/match records are compared by content hash — dashboard shows “re-analyze recommended” without over-invalidating unchanged content.
 
@@ -135,7 +133,6 @@ Every AI feature is tied to **actual resume/JD content** — the system validate
 | JobMatcher | `ai/tasks/job_matcher.py` | Match score + breakdown |
 | SkillGapAnalyzer | `ai/tasks/skill_gap_analyzer.py` | Gaps + roadmap |
 | ResumeOptimizer | `ai/tasks/resume_optimizer.py` | Full resume optimization |
-| BulletPointImprover | `ai/tasks/bullet_improver.py` | Single bullet rewrite |
 
 ### Why AI?
 
@@ -170,7 +167,6 @@ Scores are **heuristic assessments**, not guarantees of real ATS vendor behavior
 | Layer | Mechanism |
 |-------|-----------|
 | **Prompts** | Explicit “do not invent employers, dates, degrees, or metrics” |
-| **Bullet improver** | `find_fabricated_metrics()` rejects new numbers not in source bullet/context |
 | **Optimizer** | `validate_structural_facts_preserved()`, `validate_no_fabricated_content()`, grounded change explanations |
 | **Analysis issues** | `grounded_in_resume` flag; issues tied to parsed content |
 | **Caching** | Content-hash keys — same bytes → same result; content edits → new hash → re-analysis |
@@ -250,14 +246,6 @@ Interactive docs: `http://localhost:8000/api/docs`
 | GET | `/jobs/{id}` | JD detail |
 | POST | `/jobs/{id}/match` | Body: `{ resume_id, resume_version_id? }` |
 | GET | `/jobs/{id}/skill-gap?resume_id=&resume_version_id=` | Skill gap from JD side |
-
-### Bullets
-
-| Method | Path | Notes |
-|--------|------|-------|
-| POST | `/bullets/improve` | Body: `{ bullet_text, resume_id?, resume_version_id?, target_role? }` |
-| POST | `/bullets/replace` | Body: `{ resume_id, section, entry_index, bullet_index, improved_text, resume_version_id? }` |
-| GET | `/bullets/resume/{resume_id}?versionId=` | List bullets for picker UI |
 
 ### Common error envelope
 
@@ -425,7 +413,6 @@ npm run build
 | **Job analyzer** | Parsed JD fields (`/jobs/analyze`) |
 | **Job match** | Match score + breakdown chart |
 | **Skill gap** | Missing skills + roadmap |
-| **Bullet improver** | Before/after bullet (`/bullets/improve`) |
 | **Optimization review** | Section comparison + accept/reject (`/resumes/optimize/review`) |
 | **Versions** | Version list with status badges (`/resumes/versions`) |
 | **Mobile** | Dashboard or nav drawer at phone width |
@@ -443,12 +430,11 @@ Use a **fresh test account** and a real PDF/DOCX resume for the best walkthrough
 5. **Job analyzer** (`/jobs/analyze`) → paste a JD → run analysis
 6. **Match** → select your resume → view match score and breakdown
 7. **Skill gap** → review missing skills/keywords from match results UI
-8. **Bullet improver** → improve one bullet → **Replace** into resume
-9. **Optimize** → enter target role → generate → review before/after per section
-10. **Accept/reject** changes → **Apply** → note staleness banner if shown
-11. **Re-analyze** if prompted → confirm scores refresh
-12. **Versions** → see new optimized draft / version history
-13. **Download PDF** from dashboard or versions
+8. **Optimize** → enter target role → generate → review before/after per section
+9. **Accept/reject** changes → **Apply** → note staleness banner if shown
+10. **Re-analyze** if prompted → confirm scores refresh
+11. **Versions** → see new optimized draft / version history
+12. **Download PDF** from dashboard or versions
 
 **Mock mode tip:** With `AI_MOCK_MODE=true`, all AI steps return deterministic sample data instantly — useful for demos without API cost.
 
