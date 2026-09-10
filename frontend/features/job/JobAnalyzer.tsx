@@ -190,7 +190,7 @@ export function JobAnalyzer() {
     <div className="mx-auto w-full max-w-4xl space-y-6">
       <PageHeader
         title="Job description analyzer"
-        description="Extract structured requirements from a job posting, then match them against your resume using semantic similarity and structured analysis."
+        description="Extract structured requirements from a job posting, then match them against your resume."
         backHref="/dashboard"
       />
       <Card>
@@ -308,8 +308,8 @@ export function JobAnalyzer() {
                 <CardHeader>
                   <CardTitle className="text-base">Job match</CardTitle>
                   <CardDescription>
-                    Compare this job against your selected resume using semantic
-                    embeddings and structured skill/requirement analysis.
+                    Compare this job against your selected resume using skills,
+                    experience, keywords, and other structured requirements.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -327,7 +327,7 @@ export function JobAnalyzer() {
 
                   {isMatching && (
                     <div className="rounded-xl border bg-muted/30 p-6 text-sm text-muted-foreground">
-                      Computing semantic similarity and structured match breakdown…
+                      Computing match breakdown…
                     </div>
                   )}
 

@@ -1,4 +1,4 @@
-"""Semantic and structured resume–job matching."""
+"""Structured resume–job matching."""
 
 from __future__ import annotations
 
@@ -23,14 +23,11 @@ from app.repositories import (
     ResumeRepository,
     ResumeVersionRepository,
 )
-from app.services.embedding_service import EmbeddingService, semantic_similarity_score
-
 logger = logging.getLogger(__name__)
 
 PROMPT_FILE = "job_match_v1.yaml"
-PROMPT_VERSION = "job_match_v1"
+PROMPT_VERSION = "job_match_v2"
 
-SEMANTIC_WEIGHT = 0.30
 BREAKDOWN_WEIGHTS = {
     "skills_match": 0.35,
     "experience_match": 0.25,
@@ -41,7 +38,7 @@ BREAKDOWN_WEIGHTS = {
 
 
 class JobMatcher:
-    """Matches resumes against job descriptions using embeddings and structured AI analysis."""
+    """Matches resumes against job descriptions using structured AI analysis."""
 
     def __init__(self, ai_service: AIService, session: MongoSession) -> None:
         self.ai_service = ai_service
@@ -51,7 +48,6 @@ class JobMatcher:
         self.job_repo = JobDescriptionRepository(session)
         self.match_repo = JobMatchRepository(session)
         self.ai_result_repo = AIAnalysisResultRepository(session)
-        self.embedding_service = EmbeddingService(ai_service, session)
 
     async def match(
         self,
@@ -88,6 +84,7 @@ class JobMatcher:
         )
         job_hash = hash_job_text(job.raw_text)
         match_hash = hash_match_inputs(resume_hash, job_hash, version.id if version else None)
+        match_hash = f"{match_hash}:{PROMPT_VERSION}"
 
         cached = await self._get_cached_match(
             resume_id=resume_id,
@@ -98,34 +95,14 @@ class JobMatcher:
         if cached:
             return self._build_response(cached, cached=True)
 
-        resume_embedding = await self.embedding_service.ensure_resume_embedding(
-            resume,
-            resume_version=version,
-        )
-
-        if job.content_embedding is None:
-            raise AppError(
-                "Job description embedding is missing. Re-analyze the job first.",
-                code="job_embedding_missing",
-                status_code=422,
-            )
-
-        semantic_score = semantic_similarity_score(
-            resume_embedding,
-            list(job.content_embedding),
-        )
-
         output, completion = await self._call_ai(
             resume=resume,
             version=version,
             job=job,
-            semantic_score=semantic_score,
         )
 
         structured_avg = self._weighted_breakdown_average(output.breakdown)
-        match_score = round(
-            SEMANTIC_WEIGHT * semantic_score + (1 - SEMANTIC_WEIGHT) * structured_avg
-        )
+        match_score = round(structured_avg)
         match_score = max(0, min(100, match_score))
 
         keyword_score = float(output.breakdown.keyword_match)
@@ -133,8 +110,6 @@ class JobMatcher:
             **output.breakdown.model_dump(),
             "explanations": [e.model_dump() for e in output.explanations],
             "summary": output.summary,
-            "semantic_weight": SEMANTIC_WEIGHT,
-            "structured_weight": 1 - SEMANTIC_WEIGHT,
             "structured_average": structured_avg,
             "_meta": {
                 "resume_content_hash": resume_hash,
@@ -149,7 +124,7 @@ class JobMatcher:
             resume_version_id=version.id if version else None,
             job_description_id=job_description_id,
             match_score=match_score,
-            semantic_score=semantic_score,
+            semantic_score=None,
             keyword_score=keyword_score,
             breakdown=breakdown_payload,
             matched_skills=output.matched_skills,
@@ -159,7 +134,7 @@ class JobMatcher:
 
         payload = {
             "match_score": match_score,
-            "semantic_score": semantic_score,
+            "semantic_score": None,
             "keyword_score": keyword_score,
             "breakdown": breakdown_payload,
             "matched_skills": output.matched_skills,
@@ -238,7 +213,6 @@ class JobMatcher:
         resume: Any,
         version: Any | None,
         job: Any,
-        semantic_score: float,
     ) -> tuple[JobMatchOutput, Any]:
         prompt_data = load_prompt(PROMPT_FILE)
         parsed = version.content_snapshot if version else resume.parsed_structure
@@ -249,7 +223,6 @@ class JobMatcher:
         }
 
         user_prompt = prompt_data["user_template"].format(
-            semantic_score=round(semantic_score, 1),
             resume_json=json.dumps(parsed, indent=2, default=str),
             job_json=json.dumps(job_requirements, indent=2, default=str),
         )
@@ -286,7 +259,7 @@ class JobMatcher:
             "resume_version_id": job_match.resume_version_id,
             "job_description_id": job_match.job_description_id,
             "match_score": job_match.match_score,
-            "semantic_score": job_match.semantic_score,
+            "semantic_score": None,
             "keyword_score": job_match.keyword_score,
             "breakdown": core_breakdown,
             "matched_skills": job_match.matched_skills or [],

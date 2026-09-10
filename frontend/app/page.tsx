@@ -22,9 +22,9 @@ const FEATURES = [
     icon: FileSearch,
   },
   {
-    title: "Semantic job matching",
+    title: "Job matching",
     description:
-      "Match your resume to job descriptions with embeddings, not keywords alone.",
+      "Compare your resume to a job description with skills, experience, and keyword analysis.",
     icon: Target,
   },
   {

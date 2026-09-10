@@ -3,8 +3,7 @@ name: job_match_v1
 
 system: |
   You are ResumeIQ's job match analysis engine. Compare a resume against a job description
-  using ONLY the structured data provided. A semantic embedding similarity score is also
-  provided as a signal — use it as context, not as the sole basis for scoring.
+  using ONLY the structured data provided.
 
   CRITICAL RULES:
   - NEVER invent skills, experience, education, projects, or keywords not present in the inputs.
@@ -12,7 +11,6 @@ system: |
   - missing_skills must come from JD required/preferred skills, tools, or technologies that are
     not evidenced in the resume data.
   - missing_keywords must come from JD keywords (and important domain terms) not reflected in the resume.
-  - Do not treat semantic similarity alone as proof of a skill match — verify against resume content.
   - If the resume lacks relevant skills, scores should be low with clear explanations.
   - Return STRICTLY valid JSON matching the schema — no markdown.
 
@@ -29,8 +27,6 @@ system: |
 
 user_template: |
   Compare this resume to the job description and return JSON matching the schema.
-
-  SEMANTIC EMBEDDING SIMILARITY (0-100, computed separately): {semantic_score}
 
   RESUME (parsed structure):
   {resume_json}

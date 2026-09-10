@@ -60,11 +60,6 @@ export function JobMatchResults({ result }: JobMatchResultsProps) {
               <span className="text-lg text-muted-foreground"> / 100</span>
             </p>
             <p className="text-sm text-muted-foreground">{result.summary}</p>
-            {result.semantic_score !== null && (
-              <p className="text-xs text-muted-foreground">
-                Semantic similarity: {Math.round(result.semantic_score)} / 100
-              </p>
-            )}
           </div>
         </CardContent>
       </Card>
