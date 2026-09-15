@@ -52,6 +52,8 @@ class ResumeSkillSource(str, enum.Enum):
 
 class AIServiceName(str, enum.Enum):
     RESUME_ANALYZER = "resume_analyzer"
+    CAREER_TRAJECTORY = "career_trajectory"
+    RECRUITER_LENS = "recruiter_lens"
     JOB_ANALYZER = "job_analyzer"
     JOB_MATCHER = "job_matcher"
     RESUME_OPTIMIZER = "resume_optimizer"
@@ -63,6 +65,8 @@ class AIResultType(str, enum.Enum):
     ISSUES = "issues"
     SUGGESTIONS = "suggestions"
     FULL_REPORT = "full_report"
+    CAREER_TRAJECTORY = "career_trajectory"
+    RECRUITER_LENS = "recruiter_lens"
     JD_EXTRACTION = "jd_extraction"
     MATCH_DETAILS = "match_details"
     OPTIMIZATION = "optimization"

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Briefcase,
+  Compass,
+  Eye,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -22,6 +24,8 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/resumes/upload", label: "Upload", icon: Upload },
   { href: "/jobs/analyze", label: "Job match", icon: Briefcase },
+  { href: "/career-trajectory", label: "Career trajectory", icon: Compass },
+  { href: "/recruiter-lens", label: "Recruiter Lens", icon: Eye },
 ] as const;
 
 interface AppShellProps {
@@ -33,6 +37,15 @@ export function AppShell({ children, className }: AppShellProps) {
   const pathname = usePathname();
   const { logout, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [trajectoryHref, setTrajectoryHref] = useState("/career-trajectory");
+  const [recruiterLensHref, setRecruiterLensHref] = useState("/recruiter-lens");
+
+  useEffect(() => {
+    if (window.location.search) {
+      setTrajectoryHref(`/career-trajectory${window.location.search}`);
+      setRecruiterLensHref(`/recruiter-lens${window.location.search}`);
+    }
+  }, []);
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
@@ -43,10 +56,16 @@ export function AppShell({ children, className }: AppShellProps) {
   ) => {
     const Icon = item.icon;
     const active = isActive(item.href);
+    const href =
+      item.href === "/career-trajectory"
+        ? trajectoryHref
+        : item.href === "/recruiter-lens"
+          ? recruiterLensHref
+          : item.href;
     return (
       <Link
         key={item.href}
-        href={item.href}
+        href={href}
         onClick={onNavigate}
         data-active={active}
         className="nav-pill relative inline-flex items-center gap-2"

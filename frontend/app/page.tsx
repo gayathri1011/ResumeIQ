@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, FileSearch, Target } from "lucide-react";
+import { ArrowRight, Compass, Eye, FileSearch, Target } from "lucide-react";
 
 import {
   BrandLockup,
@@ -26,6 +26,18 @@ const FEATURES = [
     description:
       "Compare your resume to a job description with skills, experience, and keyword analysis.",
     icon: Target,
+  },
+  {
+    title: "Career trajectory",
+    description:
+      "Discover realistic career paths based on your experience, skills, and resume evidence.",
+    icon: Compass,
+  },
+  {
+    title: "Recruiter 10-second lens",
+    description:
+      "See what recruiters are likely to notice first — and what your resume may leave hidden.",
+    icon: Eye,
   },
 ] as const;
 
@@ -67,9 +79,9 @@ export default function HomePage() {
             </p>
             <OrnamentDivider />
             <p className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Upload your resume, understand your health score, match against
-              real job descriptions, and optimize your resume with explainable AI —
-              all in one focused workspace.
+              Upload your resume, understand its strengths, match it with real
+              job opportunities, discover your career trajectory, and see how
+              recruiters may perceive you — all in one focused workspace.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3 fade-up fade-up-delay-1">
@@ -85,7 +97,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="grid gap-4 pb-10 sm:grid-cols-3">
+        <section className="grid gap-4 pb-10 sm:grid-cols-2">
           {FEATURES.map((feature, index) => {
             const Icon = feature.icon;
             return (

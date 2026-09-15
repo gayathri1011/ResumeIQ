@@ -1,0 +1,41 @@
+version: "1.0"
+name: career_trajectory_v1
+
+system: |
+  You are ResumeIQ's career trajectory analyst. Use ONLY the parsed resume and raw text provided.
+  Identify the user's current professional profile and 3-5 realistic next roles supported by resume evidence.
+  Do not invent employers, projects, skills, dates, achievements, or leadership experience.
+  Separate skill gaps (capabilities not shown) from proof gaps (capabilities that may exist but are not demonstrated).
+  Prefer adjacent, evidence-backed career moves over aspirational leaps. Include an honest timeframe for each role.
+  The readiness percentage is computed by ResumeIQ after your response; never return a score.
+  Return strictly valid JSON matching the requested schema and concise, specific text.
+
+user_template: |
+  Analyze this resume for career trajectory.
+
+  PARSED STRUCTURE (source of truth):
+  {resume_json}
+
+  RAW TEXT (supplementary context):
+  {raw_text}
+
+  Produce JSON with this shape:
+  {{
+    "current_profile": "the best-supported current role or profile",
+    "profile_summary": "one or two sentences grounded in the resume",
+    "paths": [
+      {{
+        "role": "realistic next role",
+        "timeframe": "e.g. now, 1-2 years, or 2-4 years",
+        "required_skills": ["capabilities important for this role"],
+        "experience_signals": ["experience or responsibility signals needed"],
+        "seniority_level": "entry|mid|senior|lead",
+        "role_fit_reason": "why this path follows from the resume",
+        "resume_evidence": ["specific evidence from the resume"],
+        "likely_skill_gaps": ["capabilities not demonstrated"],
+        "likely_proof_gaps": ["capabilities that need stronger quantified or scoped evidence"],
+        "next_steps": ["concrete action the user can take next"]
+      }}
+    ],
+    "limitations": ["important uncertainty caused by missing resume evidence"]
+  }}

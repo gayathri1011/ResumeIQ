@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Circle, Loader2, X } from "lucide-react";
+import { Check, X } from "lucide-react";
+import { useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,8 @@ import { CircularScore } from "@/features/dashboard/CircularScore";
 import { ScoreCountUp } from "@/features/dashboard/ScoreCountUp";
 import type { JobMatchResult } from "@/types/match";
 import { MATCH_BREAKDOWN_LABELS } from "@/types/match";
+import { JobMatchWhyScoreDialog } from "@/features/job/JobMatchWhyScoreDialog";
+import { Button } from "@/components/ui/button";
 import {
   Bar,
   BarChart,
@@ -30,6 +33,7 @@ interface JobMatchResultsProps {
 }
 
 export function JobMatchResults({ result }: JobMatchResultsProps) {
+  const [showWhyScore, setShowWhyScore] = useState(false);
   const chartData = Object.entries(result.breakdown).map(([key, value]) => ({
     key,
     label: MATCH_BREAKDOWN_LABELS[key as keyof typeof MATCH_BREAKDOWN_LABELS],
@@ -60,9 +64,23 @@ export function JobMatchResults({ result }: JobMatchResultsProps) {
               <span className="text-lg text-muted-foreground"> / 100</span>
             </p>
             <p className="text-sm text-muted-foreground">{result.summary}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 px-2"
+              onClick={() => setShowWhyScore(true)}
+            >
+              Why this score?
+            </Button>
           </div>
         </CardContent>
       </Card>
+
+      <JobMatchWhyScoreDialog
+        open={showWhyScore}
+        onOpenChange={setShowWhyScore}
+        result={result}
+      />
 
       <Card>
         <CardHeader>

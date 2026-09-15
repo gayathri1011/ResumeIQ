@@ -28,7 +28,6 @@ import { TargetRoleField } from "@/features/dashboard/TargetRoleField";
 import { useDashboard } from "@/features/dashboard/useDashboard";
 import { getGreeting } from "@/features/dashboard/utils";
 import { WhyThisScoreDialog } from "@/features/dashboard/WhyThisScoreDialog";
-import { DownloadPdfButton } from "@/features/versions/DownloadPdfButton";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { formControlClass } from "@/lib/design";
 
@@ -107,15 +106,6 @@ export function Dashboard() {
         <PageHeader
           title={`${getGreeting()}${user?.full_name ? `, ${user.full_name}` : ""}`}
           description="Resume health overview and actionable insights"
-          actions={
-            resume.active_version_id ? (
-              <DownloadPdfButton
-                resumeId={resume.id}
-                versionId={resume.active_version_id}
-                versionLabel={resume.active_version_label}
-              />
-            ) : null
-          }
         />
 
         {needsAnalysis ? (

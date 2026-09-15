@@ -97,23 +97,21 @@ export function CategoryScoreGrid({ analysis, jobMatch, resumeId }: CategoryScor
                         {explanation}
                       </p>
                     )}
-                    {!isJobMatch && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 px-2 text-xs"
-                        onClick={() =>
-                          setDialogScope({
-                            key: category.key,
-                            label: category.label,
-                            score,
-                            explanation,
-                          })
-                        }
-                      >
-                        Why this score?
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-xs"
+                      onClick={() =>
+                        setDialogScope({
+                          key: category.key,
+                          label: category.label,
+                          score,
+                          explanation,
+                        })
+                      }
+                    >
+                      Why this score?
+                    </Button>
                   </>
                 )}
               </CardContent>
@@ -131,6 +129,7 @@ export function CategoryScoreGrid({ analysis, jobMatch, resumeId }: CategoryScor
           score={dialogScope.score}
           explanation={dialogScope.explanation}
           analysis={analysis}
+          jobMatch={jobMatch}
         />
       )}
     </>

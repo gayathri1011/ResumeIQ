@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from uuid import UUID
 
 from app.ai.client import get_ai_service
@@ -64,7 +65,13 @@ class AnalysisService:
         )
         active_version_id = version.id if version else None
 
-        analyses = await self.analysis_repo.list_by_resume(resume_id, limit=20)
+        from app.services.match_service import MatchService
+
+        match_service = MatchService(self.session)
+        analyses, matches = await asyncio.gather(
+            self.analysis_repo.list_by_resume(resume_id, limit=20),
+            match_service.match_repo.list_by_resume(resume_id, limit=20),
+        )
         if active_version_id:
             version_analyses = [
                 analysis
@@ -77,14 +84,20 @@ class AnalysisService:
             latest = await self.analysis_repo.get_latest_by_resume(resume_id)
 
         latest_analysis = None
+        linked = None
+        if latest and latest.status.value == "completed":
+            linked = await self._get_linked_ai_result(latest.id)
+
         staleness = await compute_resume_staleness(
             self.session,
             resume_id=resume_id,
             parsed_structure=parsed_structure,
             resume_version_id=active_version_id,
+            analyses=analyses,
+            matches=matches,
+            linked_analysis=linked,
         )
         if latest and latest.status.value == "completed":
-            linked = await self._get_linked_ai_result(latest.id)
             latest_analysis = ResumeAnalyzer(
                 get_ai_service(), self.session
             )._build_response(latest, linked, cached=False)
@@ -92,11 +105,10 @@ class AnalysisService:
 
         meta = (parsed_structure or {}).get("_meta", {})
 
-        from app.services.match_service import MatchService
-
-        latest_job_match = await MatchService(self.session).get_latest_match_for_resume(
+        latest_job_match = await match_service.get_latest_match_for_resume(
             resume_id,
             resume_version_id=active_version_id,
+            matches=matches,
         )
         if latest_job_match is not None:
             latest_job_match["stale"] = staleness["match_stale"]

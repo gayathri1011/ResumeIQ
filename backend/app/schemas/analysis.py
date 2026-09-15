@@ -17,6 +17,10 @@ class LatestJobMatchSummary(BaseSchema):
     semantic_score: float | None = None
     breakdown: dict[str, Any] | None = None
     summary: str = ""
+    matched_skills: list[str] = Field(default_factory=list)
+    missing_skills: list[str] = Field(default_factory=list)
+    missing_keywords: list[str] = Field(default_factory=list)
+    explanations: list[dict[str, str]] = Field(default_factory=list)
     matched_at: datetime | None = None
     stale: bool = False
 

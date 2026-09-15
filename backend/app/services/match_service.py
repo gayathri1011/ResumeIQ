@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from app.core.database import MongoSession
@@ -107,12 +108,16 @@ class MatchService:
         resume_id: UUID,
         *,
         resume_version_id: UUID | None = None,
+        matches: list[Any] | None = None,
     ) -> dict | None:
-        matches = await self.match_repo.list_by_resume(
-            resume_id,
-            limit=1,
-            resume_version_id=resume_version_id,
-        )
+        if matches is None:
+            matches = await self.match_repo.list_by_resume(
+                resume_id,
+                limit=1,
+                resume_version_id=resume_version_id,
+            )
+        elif resume_version_id is not None:
+            matches = [match for match in matches if match.resume_version_id == resume_version_id]
         if not matches:
             return None
 
@@ -139,5 +144,9 @@ class MatchService:
                 )
             },
             "summary": breakdown.get("summary", ""),
+            "matched_skills": [str(skill) for skill in (match.matched_skills or [])],
+            "missing_skills": [str(skill) for skill in (match.missing_skills or [])],
+            "missing_keywords": [str(keyword) for keyword in (match.missing_keywords or [])],
+            "explanations": breakdown.get("explanations", []),
             "matched_at": match.created_at,
         }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Briefcase, Upload } from "lucide-react";
+import { Briefcase, Compass, Eye, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -30,9 +30,27 @@ const ACTIONS = [
     href: "/jobs/analyze",
     icon: Briefcase,
   },
+  {
+    key: "career_trajectory",
+    label: "Career Trajectory",
+    description: "Discover where your career can go next",
+    href: "/career-trajectory",
+    icon: Compass,
+  },
+  {
+    key: "recruiter_lens",
+    label: "Recruiter Lens",
+    description: "See what stands out in 10 seconds",
+    href: "/recruiter-lens",
+    icon: Eye,
+  },
 ] as const;
 
-const VERSION_SCOPED_KEYS = new Set(["analyze_job"]);
+const VERSION_SCOPED_KEYS = new Set([
+  "analyze_job",
+  "career_trajectory",
+  "recruiter_lens",
+]);
 
 export function QuickActions({ resumeId, versionId }: QuickActionsProps) {
   return (
@@ -41,7 +59,7 @@ export function QuickActions({ resumeId, versionId }: QuickActionsProps) {
         <CardTitle className="text-base">Quick actions</CardTitle>
         <CardDescription>Common next steps for your resume</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-2">
+      <CardContent className="grid min-w-0 auto-rows-fr gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {ACTIONS.map((action) => {
           const Icon = action.icon;
           const scoped =
@@ -54,16 +72,16 @@ export function QuickActions({ resumeId, versionId }: QuickActionsProps) {
             <Button
               key={action.key}
               variant="outline"
-              className="h-auto justify-start gap-3 px-4 py-3 text-left"
+              className="h-full min-w-0 w-full justify-start gap-3 whitespace-normal px-4 py-3 text-left"
               asChild
             >
-              <Link href={href}>
+              <Link href={href} className="flex min-w-0 w-full items-center">
                 <span className="icon-orb h-9 w-9 shrink-0">
                   <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>
-                <span>
-                  <span className="block text-sm font-medium">{action.label}</span>
-                  <span className="block text-xs font-normal text-muted-foreground">
+                <span className="min-w-0 flex-1 break-words">
+                  <span className="block break-words text-sm font-medium">{action.label}</span>
+                  <span className="block break-words text-xs font-normal text-muted-foreground">
                     {action.description}
                   </span>
                 </span>

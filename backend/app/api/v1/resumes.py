@@ -8,6 +8,8 @@ from app.api.deps import AsyncSessionDep, CurrentUserDep
 from app.core.rate_limit import rate_limit_ai
 from app.schemas.pagination import pagination_params
 from app.schemas.analysis import AnalyzeResumeResponse, ResumeDetailResponse
+from app.schemas.recruiter_lens import RecruiterLensResponse
+from app.schemas.trajectory import CareerTrajectoryResponse
 from app.schemas.job import MatchJobResponse, ResumeJobMatchListItem
 from app.schemas.optimize import (
     ApplyOptimizationRequest,
@@ -31,7 +33,9 @@ from app.services.match_service import MatchService
 from app.services.optimizer_service import OptimizerService
 from app.services.pdf_service import PdfService
 from app.services.resume_service import ResumeService
+from app.services.recruiter_lens_service import RecruiterLensService
 from app.services.skill_gap_service import SkillGapService
+from app.services.trajectory_service import CareerTrajectoryService
 from app.services.version_service import VersionService
 
 router = APIRouter(prefix="/resumes", tags=["resumes"])
@@ -93,6 +97,46 @@ async def analyze_resume(
         resume_version_id=version_id,
     )
     return AnalyzeResumeResponse.model_validate(result)
+
+
+@router.post(
+    "/{resume_id}/trajectory",
+    response_model=CareerTrajectoryResponse,
+    dependencies=[Depends(rate_limit_ai)],
+)
+async def analyze_career_trajectory(
+    resume_id: UUID,
+    current_user: CurrentUserDep,
+    session: AsyncSessionDep,
+    version_id: UUID | None = Query(default=None, alias="versionId"),
+) -> CareerTrajectoryResponse:
+    service = CareerTrajectoryService(session)
+    result = await service.analyze(
+        resume_id,
+        user_id=current_user.id,
+        resume_version_id=version_id,
+    )
+    return CareerTrajectoryResponse.model_validate(result)
+
+
+@router.post(
+    "/{resume_id}/recruiter-lens",
+    response_model=RecruiterLensResponse,
+    dependencies=[Depends(rate_limit_ai)],
+)
+async def analyze_recruiter_lens(
+    resume_id: UUID,
+    current_user: CurrentUserDep,
+    session: AsyncSessionDep,
+    version_id: UUID | None = Query(default=None, alias="versionId"),
+) -> RecruiterLensResponse:
+    service = RecruiterLensService(session)
+    result = await service.analyze(
+        resume_id,
+        user_id=current_user.id,
+        resume_version_id=version_id,
+    )
+    return RecruiterLensResponse.model_validate(result)
 
 
 @router.get("/{resume_id}/matches", response_model=list[ResumeJobMatchListItem])

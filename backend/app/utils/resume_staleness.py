@@ -30,15 +30,18 @@ async def compute_resume_staleness(
     resume_id: UUID,
     parsed_structure: dict[str, Any] | None,
     resume_version_id: UUID | None = None,
+    analyses: list[Any] | None = None,
+    matches: list[Any] | None = None,
+    linked_analysis: AIAnalysisResult | None = None,
 ) -> dict[str, bool]:
     """Compare current content hash against analysis and match records."""
     current_hash = hash_resume_content(parsed_structure)
     analysis_stale = False
     match_stale = False
 
-    analysis_repo = ResumeAnalysisRepository(session)
+    if analyses is None:
+        analyses = await ResumeAnalysisRepository(session).list_by_resume(resume_id, limit=20)
     if resume_version_id:
-        analyses = await analysis_repo.list_by_resume(resume_id, limit=20)
         latest_analysis = next(
             (
                 analysis
@@ -49,15 +52,18 @@ async def compute_resume_staleness(
             None,
         )
     else:
-        latest_analysis = await analysis_repo.get_latest_by_resume(resume_id)
+        latest_analysis = next(
+            (analysis for analysis in analyses if analysis.status.value == "completed"),
+            None,
+        )
 
     if latest_analysis and latest_analysis.status.value == "completed":
-        linked = await _get_linked_analysis_ai_result(session, latest_analysis.id)
+        linked = linked_analysis or await _get_linked_analysis_ai_result(session, latest_analysis.id)
         if linked and linked.input_hash != current_hash:
             analysis_stale = True
 
-    match_repo = JobMatchRepository(session)
-    matches = await match_repo.list_by_resume(resume_id, limit=20)
+    if matches is None:
+        matches = await JobMatchRepository(session).list_by_resume(resume_id, limit=20)
     for match in matches:
         if resume_version_id and match.resume_version_id != resume_version_id:
             continue

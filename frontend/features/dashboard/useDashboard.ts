@@ -25,7 +25,11 @@ interface DashboardData {
   selectedVersionId: string | null;
 }
 
-export function useDashboard() {
+interface UseDashboardOptions {
+  routePath?: string;
+}
+
+export function useDashboard({ routePath = "/dashboard" }: UseDashboardOptions = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resumeIdParam = searchParams.get("resumeId");
@@ -68,7 +72,7 @@ export function useDashboard() {
       if (selectedResumeId !== resumeIdParam) {
         const query = new URLSearchParams({ resumeId: selectedResumeId });
         if (versionIdParam) query.set("versionId", versionIdParam);
-        router.replace(`/dashboard?${query.toString()}`);
+        router.replace(`${routePath}?${query.toString()}`);
       }
 
       const resume = await getResume(selectedResumeId, versionIdParam);
@@ -87,7 +91,7 @@ export function useDashboard() {
       setErrorMessage(message);
       setStatus("error");
     }
-  }, [resumeIdParam, versionIdParam, router]);
+  }, [resumeIdParam, versionIdParam, routePath, router]);
 
   useEffect(() => {
     void load();
@@ -95,9 +99,11 @@ export function useDashboard() {
 
   const selectResume = useCallback(
     (resumeId: string) => {
-      router.push(`/dashboard?resumeId=${resumeId}`);
+      const query = new URLSearchParams({ resumeId });
+      if (versionIdParam) query.set("versionId", versionIdParam);
+      router.push(`${routePath}?${query.toString()}`);
     },
-    [router],
+    [router, routePath, versionIdParam],
   );
 
   const runAnalysis = useCallback(async () => {

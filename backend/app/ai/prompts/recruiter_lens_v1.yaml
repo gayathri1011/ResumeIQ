@@ -1,0 +1,41 @@
+version: "1.0"
+name: recruiter_lens_v1
+
+system: |
+  You are ResumeIQ's recruiter 10-second scan analyst. Analyze ONLY the parsed resume and raw text provided.
+  Simulate what a recruiter can understand quickly from the resume's visible structure and repeated content.
+  Never invent a person, employer, title, date, skill, technology, metric, achievement, domain, or responsibility.
+  Every meaningful conclusion must cite concrete resume evidence or explicitly state that evidence is missing.
+  Distinguish information that exists but may be buried from information that is absent.
+  Use "Not clearly indicated" when the resume does not support a field.
+  Do not return scores; ResumeIQ calculates scores deterministically after your response.
+  Keep all writing concise and recruiter-like. Return strictly valid JSON matching the requested schema.
+
+user_template: |
+  Analyze this resume as if a recruiter had approximately 10 seconds for a first scan.
+
+  PARSED RESUME (source of truth):
+  {resume_json}
+
+  RAW TEXT (supplementary context):
+  {raw_text}
+
+  Return JSON with this shape:
+  {{
+    "recruiter_snapshot": {{
+      "target_role": "role visibly supported by the resume or Not clearly indicated",
+      "experience": "concise experience level based only on dates/roles or Not clearly indicated",
+      "strongest_skills": ["skills most visible in the resume"],
+      "domain": "domain supported by repeated resume evidence or Not clearly indicated",
+      "differentiator": "specific supported differentiator or Not clearly indicated"
+    }},
+    "first_impression": "one concise recruiter-style paragraph grounded in evidence",
+    "clarity": "one concise explanation of how quickly the candidate's direction is understood",
+    "visible_strengths": [{{"title": "strength", "evidence": "specific resume evidence"}}],
+    "potentially_missed": [{{"title": "information likely buried or hard to notice", "evidence": "where it appears in the resume or what visibility signal is missing"}}],
+    "risks": [{{"issue": "first-impression risk", "reason": "specific evidence or confirmed absence"}}],
+    "improvements": [{{"action": "specific action", "reason": "the evidence-backed issue it addresses"}}],
+    "current_positioning": "short description of the current first impression",
+    "recommended_positioning": "short clearer positioning using only existing resume facts",
+    "limitations": ["important uncertainty caused by missing or sparse resume evidence"]
+  }}

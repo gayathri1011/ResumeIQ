@@ -47,6 +47,10 @@ export interface LatestJobMatchSummary {
     education_match?: number;
   } | null;
   summary?: string;
+  matched_skills?: string[];
+  missing_skills?: string[];
+  missing_keywords?: string[];
+  explanations?: { category: string; summary: string }[];
   matched_at: string | null;
   stale?: boolean;
 }

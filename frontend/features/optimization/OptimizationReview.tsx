@@ -23,7 +23,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { SectionComparison } from "@/features/optimization/SectionComparison";
 import { loadTargetRole } from "@/features/dashboard/utils";
-import { DownloadPdfButton } from "@/features/versions/DownloadPdfButton";
 import { getUserFriendlyErrorMessage } from "@/lib/error-messages";
 import { useActionLock } from "@/lib/use-action-lock";
 import { getResume } from "@/services/analysis.service";
@@ -48,7 +47,6 @@ export function OptimizationReview() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [proposal, setProposal] = useState<OptimizationProposal | null>(null);
   const [targetRole, setTargetRole] = useState("");
-  const [versionLabel, setVersionLabel] = useState<string | null>(null);
   const [decisions, setDecisions] = useState<Record<string, ChangeDecision>>({});
   const [applyMessage, setApplyMessage] = useState<string | null>(null);
   const runLocked = useActionLock();
@@ -76,7 +74,6 @@ export function OptimizationReview() {
       if (role) setTargetRole(role);
 
       const resume = await getResume(resumeId, versionIdParam);
-      setVersionLabel(resume.active_version_label ?? null);
 
       if (shouldGenerate) {
         if (!role && !targetRole.trim()) {
@@ -238,15 +235,6 @@ export function OptimizationReview() {
         title="Optimization review"
         description="Compare the original resume with the AI proposal, then accept or reject each change."
         backHref={`/dashboard?resumeId=${resumeId}${versionIdParam ? `&versionId=${versionIdParam}` : ""}`}
-        actions={
-          versionIdParam ? (
-            <DownloadPdfButton
-              resumeId={resumeId}
-              versionId={versionIdParam}
-              versionLabel={versionLabel}
-            />
-          ) : null
-        }
       />
 
       {status === "loading" ? <FeatureSkeleton cardHeight="h-72" /> : null}

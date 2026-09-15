@@ -53,6 +53,85 @@ def _is_skill_gap_prompt(messages: list[dict[str, str]] | None) -> bool:
     return "skill gap advisor" in combined or "skill gap explanations" in combined
 
 
+def _is_trajectory_prompt(messages: list[dict[str, str]] | None) -> bool:
+    if not messages:
+        return False
+    combined = " ".join(message.get("content", "") for message in messages).lower()
+    return "career trajectory" in combined or "trajectory" in combined and "current_profile" in combined
+
+
+def _is_recruiter_lens_prompt(messages: list[dict[str, str]] | None) -> bool:
+    if not messages:
+        return False
+    combined = " ".join(message.get("content", "") for message in messages).lower()
+    return "10-second" in combined or "recruiter lens" in combined
+
+
+def _build_valid_recruiter_lens_output(messages: list[dict[str, str]] | None = None) -> dict[str, object]:
+    return {
+        "recruiter_snapshot": {
+            "target_role": "Software Engineer",
+            "experience": "Recent software engineering experience",
+            "strongest_skills": ["Python", "SQL", "REST APIs"],
+            "domain": "Backend software development",
+            "differentiator": "Backend API and service experience supported by a technical project.",
+        },
+        "first_impression": "A software engineering candidate with visible backend development, API, and database experience. The technical foundation is clear, while measurable outcomes could be easier to spot.",
+        "clarity": "The recent engineering title and backend skills create a recognizable direction in a quick scan.",
+        "visible_strengths": [
+            {"title": "Relevant technical stack", "evidence": "Python, SQL, and REST APIs are listed in the resume skills."},
+            {"title": "Backend project evidence", "evidence": "The resume includes a project demonstrating API or service work."},
+        ],
+        "potentially_missed": [
+            {"title": "Outcomes may be buried", "evidence": "Technical descriptions are present, but measurable outcomes are not prominent in the parsed content."},
+        ],
+        "risks": [
+            {"issue": "Impact is not immediately quantified", "reason": "The resume contains limited measurable results in experience or project descriptions."},
+        ],
+        "improvements": [
+            {"action": "Move one strongest backend outcome into the opening summary or first experience bullet.", "reason": "This would make the existing technical evidence easier to recognize in a fast scan."},
+            {"action": "Add metrics where they already exist in the candidate's records.", "reason": "The resume currently emphasizes implementation more than visible results."},
+        ],
+        "current_positioning": "Software engineer with backend API and database experience.",
+        "recommended_positioning": "Backend-focused software engineer specializing in Python APIs and data-backed services.",
+        "limitations": ["This is a structural resume heuristic, not real recruiter eye-tracking or a hiring prediction."],
+    }
+
+
+def _build_valid_trajectory_output(messages: list[dict[str, str]] | None = None) -> dict[str, object]:
+    return {
+        "current_profile": "Software Engineer",
+        "profile_summary": "The resume shows software engineering experience supported by backend development and API work.",
+        "paths": [
+            {
+                "role": "Backend Engineer",
+                "timeframe": "Now to 1 year",
+                "required_skills": ["Python", "SQL", "REST APIs"],
+                "experience_signals": ["backend services", "API design"],
+                "seniority_level": "mid",
+                "role_fit_reason": "This is the closest adjacent move because the resume already shows backend services and API development.",
+                "resume_evidence": ["Built backend services with Python and PostgreSQL."],
+                "likely_skill_gaps": ["Cloud deployment"],
+                "likely_proof_gaps": ["Quantified production impact"],
+                "next_steps": ["Add a measured outcome to an existing backend project.", "Document one deployed API project end to end."],
+            },
+            {
+                "role": "Full Stack Engineer",
+                "timeframe": "1 to 2 years",
+                "required_skills": ["Python", "React", "REST APIs"],
+                "experience_signals": ["frontend and backend delivery"],
+                "seniority_level": "mid",
+                "role_fit_reason": "The resume can extend its engineering foundation into full stack delivery where frontend evidence is present.",
+                "resume_evidence": ["The resume includes API and application development experience."],
+                "likely_skill_gaps": ["Production frontend ownership"],
+                "likely_proof_gaps": ["End-to-end feature ownership"],
+                "next_steps": ["Ship one project that connects a frontend to an existing API."],
+            },
+        ],
+        "limitations": ["Readiness reflects resume evidence and does not measure performance in a real hiring process."],
+    }
+
+
 def _build_valid_skill_gap_output(messages: list[dict[str, str]] | None = None) -> dict[str, object]:
     missing = ["AWS", "Kubernetes"]
     if messages:
@@ -270,6 +349,10 @@ def _resolve_mock_output(messages: list[dict[str, str]] | None) -> dict[str, obj
         return _build_valid_resume_optimize_output(messages)
     if _is_skill_gap_prompt(messages):
         return _build_valid_skill_gap_output(messages)
+    if _is_trajectory_prompt(messages):
+        return _build_valid_trajectory_output(messages)
+    if _is_recruiter_lens_prompt(messages):
+        return _build_valid_recruiter_lens_output(messages)
     if _is_job_match_prompt(messages):
         return _build_valid_match_output(messages)
     if _is_job_extraction_prompt(messages):
@@ -301,6 +384,10 @@ class MockAIProvider:
                 bad["optimized_content"] = {}
             elif _is_skill_gap_prompt(messages):
                 bad["missing_skill_explanations"] = "not-a-list"
+            elif _is_trajectory_prompt(messages):
+                bad["paths"] = []
+            elif _is_recruiter_lens_prompt(messages):
+                bad["first_impression"] = ""
             elif _is_job_match_prompt(messages):
                 bad["breakdown"] = {"skills_match": "bad"}
             elif _is_job_extraction_prompt(messages):
