@@ -64,21 +64,35 @@ export function CategoryBreakdownChart({
       </CardHeader>
       <CardContent className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+          <BarChart
+            data={data}
+            margin={{ top: 8, right: 8, left: -16, bottom: isMobile ? 18 : 0 }}
+          >
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+
             <XAxis
               dataKey="name"
               interval={isMobile ? 0 : undefined}
-              tick={{ fontSize: 12 }}
+              angle={isMobile ? -35 : 0}
+              textAnchor={isMobile ? "end" : "middle"}
+              height={isMobile ? 55 : 30}
+              tick={{ fontSize: isMobile ? 10 : 12 }}
             />
+
             <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+
             <Tooltip
               formatter={(value: number) => [`${value} / 100`, "Score"]}
               labelFormatter={(_, payload) =>
                 payload?.[0]?.payload?.fullName ?? ""
               }
             />
-            <Bar dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+
+            <Bar
+              dataKey="score"
+              fill="hsl(var(--primary))"
+              radius={[4, 4, 0, 0]}
+            />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
