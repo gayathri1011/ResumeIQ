@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -31,6 +32,7 @@ const PUBLIC_PATHS = new Set(["/", "/login", "/register"]);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const initialPathname = useRef(pathname);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -55,12 +57,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     void (async () => {
-      // Public auth pages should not wait on a cold backend when there is no token.
-      if (!getAccessToken()) {
-        setUser(null);
+      const token = getAccessToken();
+
+      // Public pages do not need a profile lookup. A token is enough to redirect
+      // an already-authenticated user; protected routes still validate it via /me.
+      if (!token || PUBLIC_PATHS.has(initialPathname.current)) {
+        if (!token) {
+          setUser(null);
+        }
         setIsLoading(false);
         return;
       }
+
       setIsLoading(true);
       await refreshUser();
       setIsLoading(false);
