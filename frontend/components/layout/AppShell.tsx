@@ -85,7 +85,7 @@ export function AppShell({ children, className }: AppShellProps) {
   };
 
   return (
-    <div className="relative min-h-screen">
+    <div className="relative min-h-screen overflow-x-clip">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-[30rem]"
         aria-hidden="true"
@@ -98,8 +98,8 @@ export function AppShell({ children, className }: AppShellProps) {
       />
 
       <header className="header-3d sticky top-0 z-40">
-        <div className="page-container flex h-16 items-center justify-between gap-4 py-0">
-          <div className="flex items-center gap-3">
+        <div className="page-container flex h-16 min-w-0 items-center justify-between gap-4 py-0">
+          <div className="flex min-w-0 items-center gap-3">
             <Button
               type="button"
               variant="ghost"
@@ -113,7 +113,7 @@ export function AppShell({ children, className }: AppShellProps) {
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
-            <BrandLockup />
+            <BrandLockup className="shrink-0" />
           </div>
 
           <nav
@@ -123,7 +123,7 @@ export function AppShell({ children, className }: AppShellProps) {
             {NAV_ITEMS.map((item) => navLink(item))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {user?.full_name ? (
               <span className="hidden max-w-[10rem] truncate text-sm text-muted-foreground sm:inline">
                 {user.full_name}

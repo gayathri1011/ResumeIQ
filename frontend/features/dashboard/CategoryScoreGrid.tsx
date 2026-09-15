@@ -53,17 +53,17 @@ export function CategoryScoreGrid({ analysis, jobMatch, resumeId }: CategoryScor
           return (
             <Card key={category.key}>
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                <div>
-                  <CardTitle className="text-sm font-medium">
+                <div className="min-w-0">
+                  <CardTitle className="break-words text-sm font-medium">
                     {category.label}
                   </CardTitle>
                   {isPlaceholder && (
-                    <CardDescription className="mt-1">
+                    <CardDescription className="mt-1 break-words">
                       Not matched yet
                     </CardDescription>
                   )}
                   {isJobMatch && jobMatch?.job_title && (
-                    <CardDescription className="mt-1">
+                    <CardDescription className="mt-1 break-words">
                       vs {jobMatch.job_title}
                       {jobMatch.company ? ` · ${jobMatch.company}` : ""}
                     </CardDescription>

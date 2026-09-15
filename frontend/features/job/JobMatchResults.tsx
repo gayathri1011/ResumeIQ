@@ -58,12 +58,12 @@ export function JobMatchResults({ result }: JobMatchResultsProps) {
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
           <CircularScore score={result.match_score} size={140} strokeWidth={10} />
-          <div className="flex-1 space-y-2 text-center sm:text-left">
+          <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left">
             <p className="text-4xl font-semibold">
               <ScoreCountUp value={result.match_score} />
               <span className="text-lg text-muted-foreground"> / 100</span>
             </p>
-            <p className="text-sm text-muted-foreground">{result.summary}</p>
+            <p className="break-words text-sm text-muted-foreground">{result.summary}</p>
             <Button
               variant="ghost"
               size="sm"

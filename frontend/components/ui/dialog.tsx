@@ -54,7 +54,7 @@ function DialogContent({
       role="dialog"
       aria-modal="true"
       className={cn(
-        "panel-3d relative z-50 flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-[1.4rem] sm:rounded-[1.4rem]",
+        "panel-3d relative z-50 flex max-h-[85vh] w-[calc(100vw-1rem)] max-w-lg flex-col rounded-t-[1.4rem] sm:w-full sm:rounded-[1.4rem]",
         className,
       )}
     >
