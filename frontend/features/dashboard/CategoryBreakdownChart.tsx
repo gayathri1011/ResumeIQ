@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -30,6 +31,16 @@ export function CategoryBreakdownChart({
   analysis,
   jobMatch,
 }: CategoryBreakdownChartProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 639px)");
+    const updateMobile = () => setIsMobile(mediaQuery.matches);
+    updateMobile();
+    mediaQuery.addEventListener("change", updateMobile);
+    return () => mediaQuery.removeEventListener("change", updateMobile);
+  }, []);
+
   const data = CATEGORY_CONFIG.map((category) => {
     const score =
       category.key === "job_match"
@@ -55,7 +66,11 @@ export function CategoryBreakdownChart({
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+            <XAxis
+              dataKey="name"
+              interval={isMobile ? 0 : undefined}
+              tick={{ fontSize: 12 }}
+            />
             <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
             <Tooltip
               formatter={(value: number) => [`${value} / 100`, "Score"]}
