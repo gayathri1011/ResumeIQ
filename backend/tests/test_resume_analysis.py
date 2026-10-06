@@ -7,17 +7,19 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-
 from app.ai.client import AIService
 from app.ai.providers.mock_provider import MockAIProvider, _build_valid_output
 from app.ai.schemas.analysis_output import ResumeAnalysisOutput
 from app.ai.tasks.resume_analyzer import ResumeAnalyzer
 from app.ai.utils import hash_resume_content
-from app.core.database import get_async_session
-from app.main import app
 from app.models.enums import AIResultType, AIServiceName, AnalysisStatus
-from app.repositories import AIAnalysisResultRepository, ResumeAnalysisRepository, ResumeRepository
+from app.repositories import (
+    AIAnalysisResultRepository,
+    ResumeAnalysisRepository,
+    ResumeRepository,
+    UserRepository,
+)
+from tests.fixtures.auth import auth_headers, signup_user
 
 
 def test_resume_analysis_output_schema_validation() -> None:
@@ -141,30 +143,31 @@ async def test_missing_certifications_not_fabricated(db_session) -> None:
 
 
 @pytest.mark.asyncio
-async def test_analyze_endpoint_with_mock(db_session, sample_pdf) -> None:
-    async def override_session():
-        yield db_session
-
-    app.dependency_overrides[get_async_session] = override_session
+async def test_analyze_endpoint_with_mock(db_session, sample_pdf, auth_client) -> None:
+    email, token = await signup_user(auth_client)
+    user = await UserRepository(db_session).get_by_email(email)
+    assert user is not None
 
     from app.parsers.registry import parse_resume_file
 
     parsed = parse_resume_file(sample_pdf, "sample.pdf", "application/pdf")
     resume_repo = ResumeRepository(db_session)
     resume = await resume_repo.create(
+        user_id=user.id,
         title="Endpoint Test",
         parsed_structure=parsed.structured.to_storage_dict(),
         raw_text=parsed.raw_text,
     )
     await db_session.flush()
 
-    with patch("app.services.analysis_service.get_ai_service") as mock_get:
-        mock_get.return_value = AIService(provider=MockAIProvider())
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.post(f"/api/v1/resumes/{resume.id}/analyze")
-
-    app.dependency_overrides.clear()
+    with patch(
+        "app.services.analysis_service.get_ai_service",
+        return_value=AIService(provider=MockAIProvider()),
+    ):
+        response = await auth_client.post(
+            f"/api/v1/resumes/{resume.id}/analyze",
+            headers=auth_headers(token),
+        )
 
     assert response.status_code == 200
     data = response.json()

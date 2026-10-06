@@ -65,6 +65,7 @@ export function SignupPage() {
     <AuthShell
       title="Create account"
       subtitle="Start telling your career story with ResumeIQ"
+      showAiMode={false}
       footer={
         <>
           Already have an account?{" "}
@@ -92,7 +93,6 @@ export function SignupPage() {
               value={fullName}
               onChange={(event) => setFullName(event.target.value)}
               className="pl-10"
-              placeholder="Optional"
             />
           </div>
         </div>
@@ -159,7 +159,7 @@ export function SignupPage() {
         {errorMessage ? <Alert variant="error">{errorMessage}</Alert> : null}
 
         <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-          {isSubmitting ? "Creating account… (may take up to 1 min)" : "Sign up →"}
+          {isSubmitting ? "Creating account…" : "Sign up →"}
         </Button>
       </form>
     </AuthShell>

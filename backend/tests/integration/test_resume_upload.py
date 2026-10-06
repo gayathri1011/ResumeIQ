@@ -3,28 +3,20 @@
 from __future__ import annotations
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-from app.core.database import MongoSession, get_async_session
-from app.main import app
+from app.core.database import MongoSession
 from app.repositories import ResumeRepository
+from tests.fixtures.auth import auth_headers, signup_user
 
 
 @pytest.mark.asyncio
-async def test_upload_persists_resume(sample_pdf, db_session: MongoSession) -> None:
-    async def override_session():
-        yield db_session
-
-    app.dependency_overrides[get_async_session] = override_session
-
+async def test_upload_persists_resume(sample_pdf, auth_client, db_session: MongoSession) -> None:
     content = sample_pdf.read_bytes()
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post(
-            "/api/v1/resumes/upload",
-            files={"file": ("sample_resume.pdf", content, "application/pdf")},
-        )
-
-    app.dependency_overrides.clear()
+    _, token = await signup_user(auth_client)
+    response = await auth_client.post(
+        "/api/v1/resumes/upload",
+        headers=auth_headers(token),
+        files={"file": ("sample_resume.pdf", content, "application/pdf")},
+    )
 
     assert response.status_code == 200
     data = response.json()
