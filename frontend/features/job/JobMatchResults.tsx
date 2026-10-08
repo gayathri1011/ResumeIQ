@@ -1,7 +1,8 @@
 "use client";
 
-import { Check, X } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
+import { BotMessageSquare, Check, X } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -64,14 +65,24 @@ export function JobMatchResults({ result }: JobMatchResultsProps) {
               <span className="text-lg text-muted-foreground"> / 100</span>
             </p>
             <p className="break-words text-sm text-muted-foreground">{result.summary}</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 px-2"
-              onClick={() => setShowWhyScore(true)}
-            >
-              Why this score?
-            </Button>
+            <div className="flex flex-wrap items-center gap-2 pt-1 justify-center sm:justify-start">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 px-2"
+                onClick={() => setShowWhyScore(true)}
+              >
+                Why this score?
+              </Button>
+              <Link
+                href={`/interview/setup?role=${encodeURIComponent(result.job_title || "")}&job_id=${result.job_description_id}&resume_id=${result.resume_id}`}
+              >
+                <Button variant="outline" size="sm" className="h-9 gap-1.5 shadow-sm">
+                  <BotMessageSquare className="h-3.5 w-3.5 text-primary" />
+                  Practice interview
+                </Button>
+              </Link>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -109,7 +120,7 @@ export function JobMatchResults({ result }: JobMatchResultsProps) {
           </CardHeader>
           <CardContent>
             {result.matched_skills.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No overlapping skills identified.</p>
+              <p className="text-sm text-muted-foreground">No matching skills found.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {result.matched_skills.map((skill) => (
@@ -126,12 +137,12 @@ export function JobMatchResults({ result }: JobMatchResultsProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400">
               <X className="h-4 w-4" />
-              Missing skills
+              Skills to improve
             </CardTitle>
           </CardHeader>
           <CardContent>
             {result.missing_skills.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No missing required skills flagged.</p>
+              <p className="text-sm text-muted-foreground">All key skills found in your resume.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {result.missing_skills.map((skill) => (
@@ -147,14 +158,14 @@ export function JobMatchResults({ result }: JobMatchResultsProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Important missing keywords</CardTitle>
+          <CardTitle className="text-base">Keywords to add</CardTitle>
           <CardDescription>
-            Domain terms and methodologies from the JD not reflected in your resume
+            Important words from the job posting missing in your resume.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {result.missing_keywords.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No missing keywords flagged.</p>
+            <p className="text-sm text-muted-foreground">All important keywords found.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {result.missing_keywords.map((keyword) => (

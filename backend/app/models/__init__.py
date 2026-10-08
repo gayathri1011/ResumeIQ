@@ -1,6 +1,8 @@
 """Beanie MongoDB documents."""
 
 from app.models.analysis import AIAnalysisResult, Recommendation, ResumeAnalysis
+from app.models.growth import CareerGrowthPlan
+from app.models.interview import InterviewSession
 from app.models.job import JobDescription, JobMatch
 from app.models.resume import Resume, ResumeVersion
 from app.models.skill import JobRequiredSkill, ResumeSkill, Skill
@@ -18,11 +20,15 @@ ALL_DOCUMENTS = [
     Skill,
     ResumeSkill,
     JobRequiredSkill,
+    InterviewSession,
+    CareerGrowthPlan,
 ]
 
 __all__ = [
     "AIAnalysisResult",
     "ALL_DOCUMENTS",
+    "CareerGrowthPlan",
+    "InterviewSession",
     "JobDescription",
     "JobMatch",
     "JobRequiredSkill",
@@ -34,3 +40,4 @@ __all__ = [
     "Skill",
     "User",
 ]
+

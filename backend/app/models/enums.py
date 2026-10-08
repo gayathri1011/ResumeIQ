@@ -59,6 +59,12 @@ class AIServiceName(str, enum.Enum):
     RESUME_OPTIMIZER = "resume_optimizer"
     ROLE_VERSION_TRANSFORMER = "role_version_transformer"
     EMBEDDING = "embedding"
+    INTERVIEW_PLANNER = "interview_planner"
+    INTERVIEW_EVALUATOR = "interview_evaluator"
+    INTERVIEW_REPORTER = "interview_reporter"
+    CAREER_GAP_ANALYZER = "career_gap_analyzer"
+    CAREER_ROADMAP_GENERATOR = "career_roadmap_generator"
+    CAREER_PROJECT_RECOMMENDER = "career_project_recommender"
 
 
 class AIResultType(str, enum.Enum):
@@ -71,3 +77,23 @@ class AIResultType(str, enum.Enum):
     MATCH_DETAILS = "match_details"
     OPTIMIZATION = "optimization"
     ROLE_TRANSFORMATION = "role_transformation"
+    INTERVIEW_PLAN = "interview_plan"
+    INTERVIEW_EVALUATION = "interview_evaluation"
+    INTERVIEW_REPORT = "interview_report"
+    CAREER_GROWTH_PLAN = "career_growth_plan"
+    CAREER_ROADMAP = "career_roadmap"
+    PROJECT_RECOMMENDATIONS = "project_recommendations"
+
+
+class InterviewStatus(str, enum.Enum):
+    SETUP = "setup"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class GrowthPlanStatus(str, enum.Enum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+    COMPLETED = "completed"
+

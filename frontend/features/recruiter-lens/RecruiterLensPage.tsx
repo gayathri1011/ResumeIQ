@@ -36,7 +36,7 @@ export function RecruiterLensPage() {
           <CardHeader className="text-center">
             <CardTitle>Upload your resume first</CardTitle>
             <CardDescription>
-              Upload your resume to see how recruiters are likely to perceive your profile in the first few seconds.
+              Upload your resume to see what recruiters notice first.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
@@ -55,7 +55,7 @@ export function RecruiterLensPage() {
       <div className="mx-auto w-full max-w-5xl space-y-6">
         <PageHeader
           title="Recruiter 10-Second Lens"
-          description="See what a recruiter is likely to notice in the first few seconds."
+          description="See what recruiters notice first on your resume."
           backHref={`/dashboard?${query.toString()}`}
         />
         <RecruiterLens

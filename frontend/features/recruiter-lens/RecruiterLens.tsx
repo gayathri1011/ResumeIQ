@@ -60,7 +60,7 @@ function RecruiterSnapshot({ result }: { result: RecruiterLens }) {
           <Eye className="h-4 w-4" />
           What a recruiter sees first
         </CardTitle>
-        <CardDescription>Estimated from the resume structure and content, not real eye-tracking data.</CardDescription>
+        <CardDescription>Estimated from your resume content and layout.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -91,7 +91,7 @@ function VisibilityScores({ result }: { result: RecruiterLens }) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">10-second visibility scores</CardTitle>
-        <CardDescription>Deterministic estimates based on section presence, repetition, and scannable evidence.</CardDescription>
+        <CardDescription>Estimated scores based on key resume sections and skills.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {result.scores.map((score) => (
@@ -116,7 +116,7 @@ function AttentionMap({ result }: { result: RecruiterLens }) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Recruiter attention map</CardTitle>
-        <CardDescription>Estimated recruiter attention based on resume structure and content.</CardDescription>
+        <CardDescription>Estimated attention based on your resume sections.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {result.attention_map.map((item) => (
@@ -158,7 +158,7 @@ export function RecruiterLens({ resumeId, versionId }: RecruiterLensProps) {
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2"><span className="icon-orb h-9 w-9"><Eye className="h-4 w-4" /></span>Recruiter 10-Second Lens</CardTitle>
-            <CardDescription className="mt-2">See what a recruiter is likely to notice in the first few seconds.</CardDescription>
+            <CardDescription className="mt-2">See what recruiters notice first on your resume.</CardDescription>
           </div>
           <Button variant="outline" onClick={() => void runAnalysis()} disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : result ? <RefreshCw className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
@@ -170,7 +170,7 @@ export function RecruiterLens({ resumeId, versionId }: RecruiterLensProps) {
           {!result && !errorMessage ? (
             <div className="flex items-center gap-3 rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground">
               <Eye className="h-5 w-5 shrink-0 text-primary" />
-              This scan uses your existing parsed resume to identify what is immediately clear, what may be missed, and how to sharpen the first impression.
+              Run a quick scan to see what recruiters notice and what to improve.
             </div>
           ) : null}
         </CardContent>
@@ -195,11 +195,11 @@ export function RecruiterLens({ resumeId, versionId }: RecruiterLensProps) {
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2 text-base text-emerald-700 dark:text-emerald-400"><Lightbulb className="h-4 w-4" />Recruiter-visible strengths</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2 text-base text-emerald-700 dark:text-emerald-400"><Lightbulb className="h-4 w-4" />Strengths recruiters see</CardTitle></CardHeader>
               <CardContent><EvidenceList items={result.visible_strengths} emptyLabel="No distinct strengths were clearly surfaced." /></CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400"><TriangleAlert className="h-4 w-4" />What a recruiter may miss</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400"><TriangleAlert className="h-4 w-4" />What recruiters may miss</CardTitle></CardHeader>
               <CardContent><EvidenceList items={result.potentially_missed} emptyLabel="No specific buried evidence was identified." /></CardContent>
             </Card>
           </div>
@@ -209,12 +209,12 @@ export function RecruiterLens({ resumeId, versionId }: RecruiterLensProps) {
               <CardContent><EvidenceList items={result.risks.map((item) => ({ title: item.issue, evidence: item.reason }))} emptyLabel="No specific first-impression risks were identified." /></CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle className="text-base">Make your resume clearer in 10 seconds</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">Quick improvements</CardTitle></CardHeader>
               <CardContent><EvidenceList items={result.improvements.map((item) => ({ title: item.action, evidence: item.reason }))} emptyLabel="No specific improvements were identified." /></CardContent>
             </Card>
           </div>
           <Card>
-            <CardHeader><CardTitle className="text-base">Positioning preview</CardTitle><CardDescription>Conceptual positioning using existing resume facts; this does not rewrite your resume.</CardDescription></CardHeader>
+            <CardHeader><CardTitle className="text-base">Positioning preview</CardTitle><CardDescription>Suggestions to improve how your experience stands out.</CardDescription></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl border border-border/60 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Current first impression</p><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{result.current_positioning}</p></div>
               <div className="rounded-xl border border-primary/25 bg-primary/5 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recommended positioning</p><p className="mt-2 text-sm leading-relaxed">{result.recommended_positioning}</p></div>

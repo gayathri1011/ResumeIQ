@@ -1,491 +1,216 @@
-# ResumeIQ — Project Overview
+# ResumeIQ — Current Project Overview
 
-**Audience:** mentors, interviewers, recruiters, reviewers, and non-technical stakeholders  
-**Project type:** portfolio / demo full-stack AI engineering application — **not** a production-scale recruitment platform  
-**Source of truth:** the current repository code (APIs, models, AI tasks, parsers, frontend routes, manifests, and config). Where comments or older docs conflict with code, **code wins**.
+**Audience:** project reviewers, developers, and product stakeholders
+**Source of truth:** current frontend routes/components, backend routers/services/models, AI tasks/prompts, manifests, and deployment configuration. The implementation—not older documentation—is authoritative.
 
----
+## 1. Product Summary
 
-## 1. Project Summary
+ResumeIQ is a full-stack resume analysis and job-fit application. An authenticated user uploads a resume, reviews an AI-generated assessment, analyzes a pasted job description, compares job requirements with the resume, and can request career-trajectory and recruiter-first-impression reports.
 
-ResumeIQ is an AI-assisted resume intelligence web application. A signed-in user uploads a resume, receives an explainable health / ATS-style analysis, pastes a job description to extract requirements and compute a job match (including semantic similarity), reviews skill gaps, improves individual bullets, runs role-targeted optimization with accept/reject review, and can download a generated PDF.
+The codebase also contains backend APIs for resume optimization, versions, role transformations, and PDF generation. Several of those capabilities do not currently have a reachable frontend screen; their implementation status is called out below rather than presented as available UI.
 
-**Primary users (product intent):** students, fresh graduates, job seekers, career switchers, and professionals applying to different roles.
+### Problem and objective
 
-**Also useful for:** portfolio demos, college/project evaluations, technical interviews, mentor reviews, and assessment of full-stack AI engineering skills.
+Applicants often lack specific feedback about resume content and how it relates to a target job. ResumeIQ aims to turn resume text and a job description into structured, explainable feedback. Its scores are application-generated assessments, not results from a commercial applicant-tracking system or predictions of hiring outcomes.
 
----
+## 2. Current User Experience
 
-## 2. User Workflow (as implemented)
+### Active frontend routes
 
-**Authentication is implemented.** Users register and log in with email/password. The API issues JWT access tokens; the frontend stores the token and attaches it to API requests. Resumes, analyses, jobs, matches, and versions are stored in MongoDB and scoped to the authenticated user.
+| Route | Current experience |
+|---|---|
+| `/` | Public product introduction with links to registration and login. |
+| `/register` | Email/password account creation; full name is optional. Successful signup stores the access token and navigates to the dashboard. |
+| `/login` | Email/password login; successful login stores the access token and navigates to the safe requested destination or dashboard. |
+| `/dashboard` | Loads the user's resumes, selects a recent resume, shows analysis state and scores, category breakdowns, explanations, and navigation actions. Empty, loading, and error states are present. |
+| `/resumes/upload` | Select or drop a PDF, DOCX, or supported image; upload progress and parsing result/error are shown. |
+| `/jobs/analyze` | Paste a job description, extract structured requirements, choose a resume, run a match, then request a skill-gap report. |
+| `/career-trajectory` | Request and review adjacent role paths, readiness factors, skills/proof gaps, and next steps for a selected resume. |
+| `/recruiter-lens` | Request and review a resume-first-impression report, visibility estimates, attention map, strengths, risks, and suggestions. |
 
-### Actual journey
+The shared authenticated navigation links to Dashboard, Upload, Job match, Career trajectory, and Recruiter Lens. It collapses to a mobile menu on small screens.
 
-1. **Landing** (`/`) — product intro; links to Sign up / Log in  
-2. **Register or log in** (`/register`, `/login`) — create an account or sign in  
-3. **Dashboard** (`/dashboard`) — select a resume; view overall score, category breakdown, “Why this score?” explanations, latest job-match summary when available, PDF download, and quick actions  
-4. **Upload master resume** (`/resumes/upload`) — PDF, DOCX, or image (PNG/JPG/JPEG/WEBP/GIF); client and server validation  
-5. **Parse & structure** — text extraction (PyMuPDF / python-docx / RapidOCR), then **heuristic section structuring** (not an LLM structuring step at upload). A **Master Resume** version is created (`is_master=True`)  
-6. **Analyze** — dashboard Analyze calls the backend; the LLM returns overall score, dimension scores with explanations, and grounded issues  
-7. **Optional job flow** (`/jobs/analyze`) — paste JD text → AI extracts title, required/preferred skills, tools, responsibilities, keywords, etc. → match against a selected resume → skill-gap panel (coverage, missing skills, learning roadmap)  
-8. **Optimize for a target role** (`/resumes/optimize/review`) — target role (stored in browser localStorage per resume; optional JD grounding) → AI proposes section changes with reasons → accept/reject → apply updates live content; a draft optimization version is also created server-side
-9. **Download PDF** — from the dashboard via backend HTML→PDF generation
+### Routes and components not currently exposed as working pages
 
-### Role-specific versions — accuracy note
+- `/resumes/versions` and `/resumes/versions/[versionId]` redirect to `/dashboard`. Version APIs and data models exist, but there is no active version-management screen.
+- `/resumes/optimize/review` redirects to `/dashboard`. An optimization-review component and client service exist in source, but no current route mounts that component.
+- The `frontend/app/bullets` route tree and `frontend/features/bullet` directory are empty. There is no current bullet-rewriting API or user-facing bullet feature.
+- A PDF download button component and PDF API endpoint exist, but the button is not referenced by an active page. PDF export is therefore an API capability, not a currently reachable user workflow.
 
-| Layer | Behavior |
-|-------|----------|
-| **Master resume** | Preserved as a master version on upload |
-| **Backend** | `POST /api/v1/resumes/{id}/versions/generate` creates a **new role-specific version** from the master (target role, optional company, optional JD text, optional experience level) via AI transformation |
-| **Frontend** | `/resumes/versions` and `/resumes/versions/[versionId]` currently **redirect to `/dashboard`**. There is **no dedicated UI** calling the role-version generate endpoint |
-| **UI path for role tailoring today** | **Optimize → review → apply**, which creates a draft labeled like `Optimized for {role}` and updates content when applied |
+## 3. Architecture
 
-A role version is intended as a **role-tailored transformation** of the master (re-prioritized wording, skills emphasis, summary, bullets) — **not** merely a shortened copy — while preserving the user’s real facts. Fabrication of employers, degrees, or metrics is discouraged by prompts and validators where implemented.
+```text
+Browser (Next.js / React)
+  ├─ App Router pages and feature components
+  ├─ sessionStorage JWT bearer token
+  └─ typed service modules and shared API client
+          │ HTTPS, JSON or multipart/form-data
+          ▼
+FastAPI (/api/v1)
+  ├─ authentication, validation, CORS, rate limits, error envelopes
+  ├─ routers → orchestration services → repositories
+  ├─ parsers, AI task modules, prompt templates, PDF renderer
+  ├─ MongoDB through Beanie and Motor
+  └─ local filesystem for uploaded originals by default
+          │
+          ├─ Groq OpenAI-compatible API by default; OpenAI-compatible provider optional
+          └─ MongoDB configured by environment
+```
 
----
+The frontend uses the shared `API_BASE_URL` and modules under `frontend/services/`. Those modules provide `/api/v1/...` paths; `frontend/lib/api-client.ts` joins them to the configured backend origin. JSON requests use `fetch`; multipart resume uploads use `XMLHttpRequest` to report progress.
 
-## 3. Features List
+The backend mounts `api_v1_router` at `/api/v1`. Routers delegate to services, which coordinate parsers, AI tasks, repositories, and response schemas. Beanie document models persist to MongoDB. There is no PostgreSQL runtime or separate vector database.
 
-### A. Resume management
+## 4. Authentication, Requests, and Errors
 
-- Authenticated upload and persistence  
-- PDF, DOCX, and image support with size/type validation  
-- Text extraction and heuristic structured sections (summary, skills, experience, education, projects, certifications, etc., as detected)  
-- Master resume version on upload  
-- Resume list/detail on dashboard  
-- Versions **API**: list, create (duplicate or upload), rename, delete (master protected), analyze/optimize per version, PDF generate, role-version generate  
-- Local file storage of originals by default (optional S3 settings exist; not required for the default path)  
+- Signup and login accept email/password; signup also accepts optional full name. Passwords are bcrypt-hashed and the API returns a signed JWT access token.
+- Tokens are stored in browser `sessionStorage` and attached as `Authorization: Bearer ...` on API requests, including upload XHRs. Logout discards the client token; the backend access token is stateless.
+- The auth provider allows the landing, login, and register routes without a token and redirects protected routes to login when unauthenticated. There is no refresh-token rotation, email verification, or OAuth flow in the current implementation.
+- Resume and job services enforce authenticated ownership for their records. Logout and `/auth/me` require authentication; signup, login, and health are public.
+- Auth and AI-heavy routes use an in-process, per-client-IP rate limiter. It is not a distributed rate limiter.
+- Application and validation errors use a JSON envelope with `error.code`, `error.message`, and optional `error.details`. Database errors are mapped to structured responses. Browser-level request failures are converted by the frontend into generic network errors, which can obscure whether the underlying browser error was a CORS, connection, or other fetch/XHR failure.
 
-### B. AI resume intelligence
+## 5. Resume Upload and Document Processing
 
-- Full-resume AI analysis with overall score (0–100)  
-- Dimension scores including: ATS compatibility, skills, experience, projects, education, certifications, achievements, professional summary, keywords, content quality, readability, relevance, quantifiable achievements, action verbs, formatting issues  
-- Aggregated category scores on the dashboard: ATS, skills, experience, projects, education, keywords, content quality  
-- Per-dimension explanations (“Why this score?”)  
-- Issues with severity, category, title, description, suggested fix, grounded-in-resume flag  
-- Content-hash caching so unchanged content can reuse prior analysis  
+1. The upload UI validates extension, MIME type, non-empty content, and the configured client size limit, then posts multipart form data to `POST /api/v1/resumes/upload`.
+2. The FastAPI route requires a bearer-authenticated user. `ResumeService` applies server-side extension, MIME, empty-file, and size checks (10 MB by default).
+3. The service temporarily writes the content, dispatches to a format-specific parser, removes the temporary file, then saves the original under the configured local storage directory and persists extracted content.
+4. Upload creates the resume record and its initial master `ResumeVersion`. Resume embedding generation is attempted after parsing; an embedding error is logged and does not fail the upload.
 
-Scores are **application-defined analytical estimates**, not guarantees of any commercial ATS vendor’s result.
+### Supported parsing
 
-### C. Job description intelligence
+| Format | Current implementation |
+|---|---|
+| PDF | PyMuPDF text extraction; text size is one heading signal. Scanned PDFs are not automatically OCRed by the PDF parser. |
+| DOCX | `python-docx` paragraph extraction; heading styles and short bold paragraphs provide heading signals. |
+| PNG/JPG/JPEG/WEBP/GIF | RapidOCR/ONNX Runtime extracts image text; short all-caps lines help identify headings. |
 
-- Paste raw JD text; optional company  
-- AI extraction: job title, required/preferred skills, experience requirements, education requirements, tools, technologies, responsibilities, keywords  
-- Persist job descriptions per user  
-- Resume ↔ job match with overall score, breakdown (skills, experience, keywords, projects, education), matched/missing skills, missing keywords, explanations  
-- Skill-gap view: coverage percent, matched/missing skills (with priority/rationale), learning roadmap; recommendations may be stored internally (no standalone recommendations page)  
+Shared Python parsing code normalizes lines, matches known section-heading aliases, and uses regular expressions and simple rules to structure personal information, summary, skills, experience, education, projects, certifications, achievements, and links. Upload structuring is heuristic, not an LLM extraction step. Results include detected/missing section metadata. OCR quality depends on the image.
 
-### D. Semantic / AI matching
+Original files use the local filesystem implementation under `FILE_STORAGE_PATH` (default `./uploads`). S3 settings are present, but `get_file_storage()` currently implements only local storage; selecting another backend raises `NotImplementedError`. `render.yaml` does not configure a persistent disk, so durable uploaded-file storage on Render must be configured separately if required.
 
-**Implemented (MongoDB float arrays + in-app cosine similarity — not PostgreSQL/pgvector):**
+## 6. Resume Analysis and Dashboard
 
-- Embedding generation for resume and job text  
-- Vectors stored on MongoDB documents  
-- Cosine similarity in application code  
-- Semantic score contributes **30%** of the final job match score; structured AI breakdown contributes **70%**  
-- Default embedding model: `nomic-embed-text-v1_5` (768 dimensions)  
-- If the provider embedding API fails, a **deterministic local hash-based embedding fallback** is used  
+Analysis is initiated from the dashboard after upload; upload itself does not run resume scoring. The authenticated `POST /api/v1/resumes/{resume_id}/analyze` route calls `ResumeAnalyzer` with the parsed structure and raw text. The AI response is validated against a Pydantic schema and contains an overall 0–100 score, category scores, dimension explanations, summary, and evidence-linked issues/suggested fixes.
 
-**Not implemented:** PostgreSQL, pgvector, Atlas Vector Search, or a dedicated vector database.
+The dashboard displays the latest analysis, category breakdowns, “Why this score?” explanations, and stale/re-analysis indicators. Resume analysis and related AI payloads are persisted; content hashes allow reuse when the parsed input has not changed. Scores are model-generated assessments, not verified ATS scores.
 
-Embeddings allow comparison of **meaning** between resume and JD text, not only exact keyword overlap.
+## 7. Job Description, Matching, and Skill Gaps
 
-### E. Role-specific resume versioning
+1. The user pastes a job posting in `/jobs/analyze`; the UI checks for a minimum-length description and can associate a resume.
+2. `POST /api/v1/jobs/analyze` validates and normalizes the text. `JobDescriptionAnalyzer` uses a YAML prompt and structured AI output to extract role title, required/preferred skills, experience/education requirements, tools, technologies, responsibilities, and keywords. It stores the raw text, parsed requirements, and an embedding.
+3. `POST /api/v1/jobs/{job_id}/match` checks ownership and calls `JobMatcher`. The matcher compares the parsed resume structure with parsed job requirements using a structured AI rubric. Its saved score is the weighted average of structured subscores: skills 35%, experience 25%, keywords 15%, project relevance 15%, and education 10%.
+4. The current matcher sets `semantic_score` to `null`; it does **not** combine cosine similarity with the structured score. Embeddings are generated/stored, but are not currently consumed by match scoring. A cosine-similarity helper and local embedding fallback exist in code, but are not part of current match ranking.
+5. Skill-gap retrieval uses existing match/JD data. Skill-name normalization and containment rules derive coverage and prioritize missing skills; required skills have weight 1.0, while preferred skills, tools, and technologies have weight 0.5. An AI task supplies explanations and a learning roadmap. Recommendations are persisted internally, but there is no standalone recommendations route or screen.
 
-| Capability | Status |
-|------------|--------|
-| Master resume preserved | Implemented |
-| Separate stored versions | Implemented (API + DB) |
-| AI transform for target role (+ optional company / JD / experience level) | Implemented on **backend** |
-| Dedicated frontend for generating/browsing role versions | **Not currently implemented** (routes redirect) |
-| Role-targeted optimization with accept/reject in UI | Implemented |
-| Draft optimization versions labeled by role | Implemented |
-| Rename / delete versions (API) | Implemented |
-| PDF download for a version | Implemented (dashboard UI + API) |
-| Dedicated multi-version comparison product screen | Not present in the live UI |
+The match report includes the structured breakdown, matched/missing skills and keywords, explanatory text, cache status, and timestamps. It is not a measurement of a third-party ATS.
 
-### F. AI content improvement
+## 8. Other AI Capabilities
 
-- Replace improved bullet into resume content  
-- Full-resume optimization proposals with before/after and “why” notes  
-- Accept / reject (and bulk actions) then apply  
-- Anti-fabrication checks on bullets/optimization where coded  
+| Capability | What current code does | User access/status |
+|---|---|---|
+| Career Trajectory | AI proposes possible roles from resume evidence; backend calculates deterministic readiness factors and returns skill gaps, proof gaps, and next steps. Results are cached by resume content/prompt version. | Active `/career-trajectory` page; requires a parsed resume and asks the user to run the report. |
+| Recruiter 10-Second Lens | AI returns a recruiter snapshot, first impression, strengths, risks, and suggestions. Backend derives visibility scores and an attention map from resume structure; these are estimates, not real eye-tracking. | Active `/recruiter-lens` page. |
+| Resume optimization | Backend can request a role- or job-grounded proposal, validates output against structural facts and fabrication checks, stores changes, and accepts/rejects them through an apply endpoint. | API/service code exists; the current review route redirects to the dashboard, so this workflow is not reachable from the current UI. |
+| Resume versions and role transformation | Backend supports listing, creating, renaming, deleting, analyzing, optimizing, transforming for a role, and exporting versions. Upload creates the master version. | APIs exist; version pages redirect to the dashboard. No active version-management or role-transformation UI is wired. |
+| Bullet improvement | No current backend endpoint, feature implementation, or active route was found. | Not implemented. |
+| PDF export | Backend renders stored version content through a Jinja2 HTML template and PyMuPDF `Story` to a PDF stream. | API exists at the version `generate` endpoint; a frontend button component exists but is not imported by an active route. |
 
-### G. Export
+## 9. AI, Prompts, Embeddings, and Retrieval
 
-- PDF generation from stored structured content (Jinja2 HTML → PyMuPDF `Story`)  
-- Download as attachment from the API  
+- `AIService` is the shared structured-completion facade. It selects the mock provider when `AI_MOCK_MODE=true`, otherwise Groq by default or the OpenAI-compatible provider when configured. The Groq provider uses the OpenAI SDK against Groq's compatible endpoint.
+- Defaults are `AI_PROVIDER=groq`, chat model `openai/gpt-oss-120b`, embedding model `nomic-embed-text-v1_5`, and 768 embedding dimensions. Provider credentials remain server-side.
+- Task-specific YAML prompts cover resume analysis, job analysis, matching, skill gaps, optimization, role transformation, recruiter lens, and career trajectory. The loader reads YAML with PyYAML; task code formats the user prompt and validates returned JSON with Pydantic. Malformed structured output can be retried with a repair instruction. Model/prompt metadata and token usage are stored when returned by the provider.
+- The OpenAI-compatible provider requests embeddings. If the embedding model returns a not-found response, code falls back to a deterministic local hash-based text vector. This is not a trained embedding model.
+- Resume, version, and job documents have float-array embedding fields. There is no MongoDB vector index, Atlas Vector Search, pgvector, or dedicated vector database in the current matching path. The normalized skill collections are registered as models but the current matcher does not use them.
+- No custom model training, labeled dataset, formal accuracy/precision/recall/F1 benchmark, or hiring-outcome evaluation is included in the repository.
 
-**DOCX export:** not implemented.
+## 10. Data Layer
 
-### H. Frontend UX
+The application uses MongoDB through Motor and Beanie. `MongoDocument` supplies UUID identifiers and timestamps; repositories wrap document operations. Main collections registered at startup include:
 
-- Responsive App Shell (Dashboard, Upload, Job match, Bullets)  
-- Auth pages and JWT-protected API usage  
-- Dashboard empty / error / skeleton states  
-- Score count-up and circular score motion (Framer Motion)  
-- Category breakdown chart (Recharts, lazy-loaded on dashboard)  
-- Job match charts (Recharts)  
-- Upload step indicator; drag-and-drop style upload UX  
-- Job step indicator; inline alerts/errors  
-- Optimization section comparison UI  
-- Feature skeletons / loading indicators  
-- Dialog for “Why this score?”  
+| Collection | Purpose |
+|---|---|
+| `users` | Email, password hash, optional full name. |
+| `resumes` | Owner, original file metadata/path, raw text, parsed structure, optional embedding. |
+| `resume_versions` | Numbered resume snapshots, source/status, target-role metadata, optional embedding. |
+| `resume_analyses` | Overall/category scores, issues, status, timestamps. |
+| `job_descriptions` | Owner, raw JD, parsed requirements, optional embedding. |
+| `job_matches` | Resume/JD references, score, breakdown, matched/missing terms. |
+| `ai_analysis_results` | Structured AI payloads, input hashes, model/prompt metadata, token usage, linked records. |
+| `recommendations` | Skill-gap-derived recommendation records. |
+| `skills`, `resume_skills`, `job_required_skills` | Normalized skill models/repositories exist, but are not used by the current match flow. |
 
-**Not found:** a dedicated toast notification library; feedback is largely inline alerts.
+Repositories and ownership helpers scope user-facing resume/job operations. Startup attempts Mongo initialization; the app logs initialization failure so health can still answer, while data-dependent routes cannot operate without the database. Local development can use the MongoDB 7 service in `docker-compose.yml`; hosted environments supply their Mongo connection through environment variables.
 
-### I. Backend / technical
+## 11. API Surface
 
-- FastAPI REST API under `/api/v1`  
-- Pydantic validation and structured AI output schemas  
-- Beanie ODM + Motor (MongoDB)  
-- JWT auth: signup, login, logout, `/me`; bcrypt password hashing  
-- Ownership checks on resume/job resources  
-- Rate limiting on auth and AI-heavy routes  
-- CORS configuration  
-- AI provider abstraction (Groq default; OpenAI-compatible option; mock mode)  
-- File parsing pipeline and PDF service  
-- Structured error envelopes  
-- pytest suite (behavior and regression helpers — **not** formal ML accuracy benchmarks)  
+Base prefix: `/api/v1`. Local interactive documentation is served at `/api/docs`.
 
----
+| Area | Implemented paths (relative to `/api/v1`) |
+|---|---|
+| Health | `GET /health` |
+| Authentication | `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` |
+| Resume core | `GET /resumes`, `POST /resumes/upload`, `GET /resumes/{resume_id}`, `POST /resumes/{resume_id}/analyze` |
+| Resume insights | `POST /resumes/{resume_id}/trajectory`, `POST /resumes/{resume_id}/recruiter-lens`, `GET /resumes/{resume_id}/matches`, `GET /resumes/{resume_id}/skill-gap` |
+| Jobs | `GET /jobs`, `POST /jobs/analyze`, `GET /jobs/{job_id}`, `POST /jobs/{job_id}/match`, `GET /jobs/{job_id}/skill-gap` |
+| Optimization API | `POST /resumes/{resume_id}/optimize`, `GET /resumes/{resume_id}/optimization/latest`, `POST /resumes/{resume_id}/optimization/apply` |
+| Version API | `GET/POST /resumes/{resume_id}/versions`, `GET/PATCH/DELETE /resumes/{resume_id}/versions/{version_id}`, `POST /resumes/{resume_id}/versions/generate`, `GET /resumes/{resume_id}/versions/{version_id}/transformation`, and version-scoped analyze/optimize/PDF-generate endpoints |
 
-## 4. Tech Stack
+Protected endpoints use `Authorization: Bearer <access_token>`. Resume upload uses multipart field `file`; version creation also accepts multipart fields. All paths above are implemented in routers, but only the active frontend routes described above are currently exposed to users.
+
+## 12. Technology and Configuration
 
 ### Frontend
 
-| Technology | Why it is used |
-|------------|----------------|
-| **Next.js 15** (App Router) | Frontend framework and routing |
-| **React 19** | UI and client interactivity |
-| **TypeScript** | Typed frontend |
-| **Tailwind CSS** | Styling |
-| **Radix Slot + local UI primitives** | Button/card/dialog-style components (shadcn-like pattern) |
-| **Lucide React** | Icons |
-| **Framer Motion** | Motion (shell, scores, upload, dialogs) |
-| **Recharts** | Dashboard and job-match charts |
+Next.js 15 App Router, React 19, TypeScript, Tailwind CSS, local/Radix-based UI primitives, Lucide React, Framer Motion, and Recharts. Vitest is configured for frontend tests. `@/*` resolves to the frontend root.
+
+`NEXT_PUBLIC_API_BASE_URL` is the backend **origin**; service paths already include `/api/v1`. The local `.env.local.example` uses `http://localhost:8000`. `frontend/lib/constants.ts` falls back to that local origin outside production and to `https://resumeiq-vxu1.onrender.com` in production if the variable is unset. Vercel public environment values are embedded at build time; do not append a second `/api/v1` to the base URL.
 
 ### Backend
 
-| Technology | Why it is used |
-|------------|----------------|
-| **Python 3.11–3.12** (`requires-python >=3.11,<3.13`) | Runtime (OCR deps need &lt;3.13) |
-| **FastAPI** | HTTP API |
-| **Uvicorn** | ASGI server |
-| **Pydantic / pydantic-settings** | Validation and config |
-| **Beanie + Motor** | MongoDB ODM / async driver |
-| **PyJWT + bcrypt** | Auth |
-| **OpenAI SDK / httpx** | Provider-compatible HTTP client |
-| **PyYAML** | Prompt loading |
-| **Jinja2** | Resume HTML for PDF |
+Python `>=3.11,<3.13`; Render pins Python `3.12.8`. FastAPI/Uvicorn, Pydantic v2 and pydantic-settings, Beanie/Motor/PyMongo, PyJWT/bcrypt, the OpenAI SDK, PyYAML, PyMuPDF, python-docx, Pillow/RapidOCR ONNX Runtime, aiofiles, and Jinja2 are declared in `backend/pyproject.toml` / `requirements.txt`.
 
-### AI / LLM
+### Key environment groups
 
-| Item | Actual default in code / `.env.example` |
-|------|----------------------------------------|
-| Provider | **Groq** (`AI_PROVIDER=groq`) |
-| Chat model | **`openai/gpt-oss-120b`** |
-| Embedding model | **`nomic-embed-text-v1_5`** |
-| Optional | `AI_PROVIDER=openai`; `AI_MOCK_MODE=true` for deterministic mocks |
-
-LLM-backed tasks: resume analysis, job description analysis, job matching breakdown, skill-gap enrichment, resume optimization, role-version transformation (backend).
-
-Chat inference runs on **Groq’s cloud**, not on a local GPU in this repo.
-
-### Resume processing
-
-| Library | Use |
-|---------|-----|
-| **PyMuPDF (`pymupdf`)** | PDF text extraction; PDF export rendering |
-| **python-docx** | DOCX text extraction |
-| **Pillow + rapidocr-onnxruntime** | Image resume OCR |
-
-### Database
-
-- **MongoDB 7** (local via `docker-compose.yml`, or hosted Atlas-compatible URL)  
-- Embeddings as float arrays; similarity in Python  
-
-**PostgreSQL / pgvector:** not used by the running app. An `alembic/` tree may remain as leftover from an earlier design — it is **not** the active persistence layer.
-
-### Deployment configuration in repo
-
-- `render.yaml` and Python pin (`3.12.8`) for Render-style backend deploy  
-- Frontend env `NEXT_PUBLIC_API_BASE_URL` suitable for Vercel or any Next host  
-- Known deployed backend example used in project setup: `https://resumeiq-vxu1.onrender.com`
-
----
-
-## 5. How to Run the Project
-
-Based on the repository README and manifests.
+- Backend: Mongo URL/database; JWT secret/algorithm/expiry; CORS origins/regex; auth/AI rate limits; AI provider, key, model, timeouts/retries/mock mode; upload size/extensions; file storage backend/path.
+- Frontend: `NEXT_PUBLIC_API_BASE_URL`, display name, and client upload-size hint. No AI secret belongs in frontend variables.
+- The backend `.env.example` is a template, not a live deployment configuration. Never copy secrets into this document.
 
-### Prerequisites
+## 13. Deployment and Local Operation
 
-- Docker (MongoDB)  
-- Python **3.11 or 3.12** (not 3.13+)  
-- Node.js 20+  
-- Groq API key (or enable mock mode)
+### Deployment configuration in this repository
 
-### 1. Clone
+- `render.yaml` defines the FastAPI web service, runs Uvicorn on Render's `$PORT`, pins Python `3.12.8`, and configures a regex for `https://*.vercel.app` origins. Custom frontend domains must be included in the Render `CORS_ORIGINS` environment value.
+- The Next.js frontend is deployed separately to Vercel; no Vercel deployment manifest is present in the repository. Production requires `NEXT_PUBLIC_API_BASE_URL` to name the Render origin, without `/api/v1`.
+- `docker-compose.yml` defines only MongoDB 7 for local development; it does not start the frontend or backend.
+- At review time, the observed production frontend was `https://frontend-liard-phi-22.vercel.app` and its loaded bundle used `https://resumeiq-vxu1.onrender.com`.
 
-```powershell
-git clone <your-repo-url> resume
-cd resume
-```
+### Local startup
 
-### 2. Database
+1. Start MongoDB with `docker compose up -d` from the repository root.
+2. In `backend/`, create and activate a virtual environment, install `pip install -e ".[dev]"`, copy `.env.example` to `.env`, and configure database/JWT/AI settings. Run `uvicorn app.main:app --reload --port 8000`.
+3. In `frontend/`, install with `npm ci`, copy `.env.local.example` to `.env.local`, keep `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`, and run `npm run dev`.
+4. Open `http://localhost:3000`; health is at `http://localhost:8000/api/v1/health`.
 
-```powershell
-docker compose up -d
-```
+## 14. Current vs. Not Implemented
 
-### 3. Backend
+### Currently implemented
 
-```powershell
-cd backend
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install -e ".[dev]"
-copy .env.example .env
-# Edit .env — set SECRET_KEY, JWT_SECRET_KEY, AI_API_KEY (or AI_MOCK_MODE=true)
-uvicorn app.main:app --reload --port 8000
-```
+Authentication, protected resume upload and parsing, dashboard analysis and explanations, job-description extraction/matching, skill-gap reports, Career Trajectory, Recruiter 10-Second Lens, Mongo persistence, AI result caching, local original-file storage, and backend APIs for optimization/version/PDF workflows.
 
-Interactive API docs: `http://localhost:8000/api/docs`
+### Not implemented or not exposed as user workflows
 
-### 4. Frontend
+- No active bullet-improvement feature or bullet API.
+- No active version browsing/management or optimization-review route; current route files redirect to the dashboard even though related backend APIs and some frontend components exist.
+- No active PDF download entry point in the current pages; the API and an unreferenced button component exist.
+- No standalone recommendations API/screen, email verification, refresh tokens, OAuth, background job queue, S3 storage implementation, vector database, custom model training, or formal ML benchmark.
+- The repository does not define a committed product roadmap. The items above describe omissions, not promised delivery dates.
 
-```powershell
-cd frontend
-npm install
-copy .env.local.example .env.local
-# Set NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-npm run dev
-```
+## 15. Tests, Limitations, and Data Handling
 
-Open `http://localhost:3000`.
+Backend tests live under `backend/tests` and use pytest; database-backed fixtures skip when MongoDB is unavailable. The suite covers API/auth, upload/parsing, analysis, matching, optimization, recruiter lens, trajectory, rate limits, and other feature behavior. Frontend tests use Vitest. These are software behavior checks, not model-quality benchmarks.
 
-### Environment variable names (values not disclosed)
+The application processes account email, password hashes, uploaded files, extracted resume text/structure, job descriptions, AI outputs, and related records. When mock mode is off, task-specific resume/JD-derived prompts are sent to the configured AI provider. MongoDB is the application data store; original files default to local disk. Review deployment storage and provider/data policies before using sensitive production resumes.
 
-**Backend** (`backend/.env.example` / `Settings`):
-
-| Name | Purpose |
-|------|---------|
-| `ENVIRONMENT` | Runtime environment label |
-| `DEBUG` | Debug logging |
-| `SECRET_KEY` | App secret |
-| `MONGODB_URL` / `DATABASE_URL` | Mongo connection |
-| `MONGODB_DB` | Database name |
-| `EMBEDDING_DIMENSIONS` | Embedding vector size (default 768) |
-| `CORS_ORIGINS` | Allowed frontend origins |
-| `JWT_SECRET_KEY` | JWT signing secret |
-| `JWT_ALGORITHM` | JWT algorithm |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token lifetime |
-| `AUTH_RATE_LIMIT_PER_MINUTE` | Auth throttle |
-| `AI_RATE_LIMIT_PER_MINUTE` | AI endpoint throttle |
-| `AI_PROVIDER` | `groq` or `openai` |
-| `AI_API_KEY` | Provider API key (**server only**) |
-| `AI_BASE_URL` | OpenAI-compatible base URL |
-| `AI_MODEL` | Chat model id |
-| `AI_EMBEDDING_MODEL` | Embedding model id |
-| `AI_MAX_RETRIES` | AI retry count |
-| `AI_REQUEST_TIMEOUT_SECONDS` | AI timeout |
-| `AI_MOCK_MODE` | Mock AI for tests/dev |
-| `UPLOAD_MAX_SIZE_MB` | Upload size limit |
-| `UPLOAD_ALLOWED_EXTENSIONS` | Allowed file extensions |
-| `FILE_STORAGE_BACKEND` | Storage backend (`local` default) |
-| `FILE_STORAGE_PATH` | Local upload directory |
-| `S3_BUCKET` / `S3_REGION` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Optional S3 |
-
-**Frontend** (`frontend/.env.local.example`):
-
-| Name | Purpose |
-|------|---------|
-| `NEXT_PUBLIC_API_BASE_URL` | Backend origin used by the browser |
-| `NEXT_PUBLIC_APP_NAME` | Display name |
-| `NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB` | Client upload size hint |
-
----
-
-## 6. How to Use the App (non-technical)
-
-### Step 1 — Create an account
-
-Sign up with email and password (password must include at least one letter and one number), then log in.
-
-### Step 2 — Upload your master resume
-
-Upload a PDF, Word (DOCX), or image resume. ResumeIQ extracts text and organizes detected sections into a structured master version.
-
-### Step 3 — Review Resume Intelligence
-
-From the dashboard, run analysis. You see an overall score, category scores, charts, explanations of why scores look that way, and prioritized issues.
-
-### Step 4 — Add a target job (optional)
-
-On Job match, paste a job description. ResumeIQ extracts requirements, then compares your resume to the role.
-
-### Step 5 — See job compatibility
-
-You see a match score, breakdown categories, matched and missing skills/keywords, and a skill-gap / learning-roadmap style summary.
-
-### Step 6 — Improve content or optimize for a role
-
-Use Optimize to generate role-focused changes, accept or reject each change, and apply.
-
-### Step 7 — Download
-
-Generate and download a PDF of the current version when ready to export.
-
----
-
-## 7. Current Deployment Status
-
-| Layer | Status |
-|-------|--------|
-| Frontend | Next.js; env-driven API base URL (suitable for **Vercel**) |
-| Backend | FastAPI; **Render**-oriented config (`render.yaml`, Python `3.12.8`) |
-| Database | MongoDB (local Docker or hosted Atlas-compatible URL) |
-| AI | Groq API for chat (+ embeddings when available; local fallback otherwise) |
-| Auth | Implemented; multi-user persistence in MongoDB |
-| Local defaults | Local filesystem uploads; mock AI mode for offline/dev |
-| Cold starts | Free-tier Render services may cold-start; first API/AI call can be slower |
-| Local model loading | RapidOCR ONNX runs in-process for image resumes; chat LLM is remote (Groq) |
-
-Production behavior depends on correct env vars (Mongo, JWT secrets, Groq key, CORS including the Vercel origin).
-
----
-
-## 8. Data Disclosure
-
-**Collected / processed**
-
-- Account email, password hash, optional full name  
-- Uploaded resume files (under configured file storage)  
-- Extracted raw text and structured resume JSON  
-- Job description text and extracted requirements  
-- Analysis, match, optimization, and related AI result payloads  
-- Embeddings (float vectors) on resume/job (and version) documents  
-- JWT access tokens on the client after login  
-
-**Sent to the AI provider (when mock mode is off)**
-
-- Prompt content derived from resume/JD text and structured JSON needed for the task  
-
-**Persistence**
-
-- User and resume history **are** persisted in MongoDB for authenticated users  
-- AI responses may be cached by content/input hash  
-
-**Not claimed**
-
-- Formal privacy certification, DPA packaging, or enterprise data residency controls — not evidenced in code  
-
----
-
-## 9. Results / Model Performance
-
-**No formal benchmark was found in the current repository.**
-
-What exists instead:
-
-- Application-defined 0–100 scores from LLM structured outputs  
-- Weighted job match: **30% semantic similarity + 70% structured breakdown**  
-- Automated software tests (pytest / Vitest) for API behavior, validation, and some performance/regression helpers  
-- Deterministic mock provider for development without live model calls  
-
-Do not treat resume or match scores as verified real-world hiring outcomes. ATS-style scores are analytical estimates defined by this application.
-
----
-
-## 10. AI Model / Engineering Disclosure
-
-ResumeIQ combines:
-
-1. **Document parsing** — deterministic extraction + heuristic structuring  
-2. **LLM reasoning** — Groq-hosted `openai/gpt-oss-120b` (default) for analysis, JD extraction, match narrative, gaps, bullets, optimization, and backend role-version transform  
-3. **Structured outputs** — Pydantic schemas with validation / repair behavior in the AI client  
-4. **Embeddings + cosine similarity** — semantic signal for job match  
-5. **Rule/weight blending** — fixed 30% / 70% semantic vs structured weights in the matcher  
-6. **Safeguards** — prompts and validators discouraging invented employers/dates/metrics  
-7. **Caching** — hash-keyed reuse of AI results when inputs are unchanged  
-8. **PDF rendering** — template HTML to PDF without another LLM call  
-
-There is **no custom model training** in this repo. The project demonstrates **integration engineering** around a hosted LLM and light embedding logic.
-
----
-
-## 11. Roadmap — NOT YET IMPLEMENTED
-
-### A. Full role-version product UI
-
-Backend generate exists; dedicated versions browse/create UX is **not** wired (routes redirect to dashboard).
-
-### B. Email verification & refresh tokens
-
-Signup/login use access JWTs only; no email verification or refresh-token rotation as product features.
-
-### C. Background job queue
-
-AI and PDF work run in request handlers (with thread offload for some blocking work) — no Celery/ARQ-style queue as a first-class system.
-
-### D. Multiple PDF templates
-
-Single HTML→PDF path.
-
-### E. Normalized skills taxonomy as runtime matcher
-
-A skills-related model/collection may exist; runtime matching uses AI + embeddings, not a populated skills ontology product.
-
-### F. S3 as default storage
-
-Configured optionally; default is local filesystem.
-
-### G. Standalone recommendations screen
-
-Skill-gap data may be stored; a dedicated Recommendations API/UI is deferred per project docs.
-
-### H. Production-scale ops
-
-Broader observability, queueing, CI/CD polish, and multi-template ATS exports remain roadmap-level.
-
-Some dashboard fix-action labels still say “coming soon” for skill/ATS-specific shortcuts that are not separate screens.
-
----
-
-## 12. Limitations
-
-- LLM advice can be wrong or incomplete; humans should review before applying.  
-- ATS and match scores are heuristic estimates, not vendor ATS scores or interview guarantees.  
-- Optimization quality depends on source resume quality and truthful input.  
-- Image OCR quality varies with scan quality.  
-- Semantic fallback embeddings (when the embed API fails) are weaker than true model embeddings.  
-- Free-tier API and host cold starts can add latency or rate-limit failures.  
-- Role-version **API** capability is ahead of the **versions UI**.  
-- Not positioned as an enterprise ATS or applicant-tracking system of record.
-
----
-
-## 13. Project Positioning
-
-ResumeIQ is a **working portfolio demonstration** of a practical career-product workflow built with:
-
-- modern frontend engineering  
-- FastAPI backend design  
-- document parsing (PDF/DOCX/OCR)  
-- hosted LLM integration with structured outputs  
-- embeddings and similarity scoring  
-- MongoDB persistence and authentication  
-- explainable scoring and optimization review  
-- PDF export  
-
-> **A working demonstration of how AI can be integrated into a practical career-product workflow.**
-
-Evaluate it as a full-stack AI engineering sample — **not** as a production recruitment platform.
-
----
-
-## 14. Accuracy note
-
-This overview was produced by inspecting frontend routes/features, backend routers/services/AI tasks/parsers/models/config, dependency manifests, Docker Compose, Render Python pin, and tests. Features described only in older comments/READMEs but not wired (for example, a dedicated versions UI, PostgreSQL/pgvector, or DOCX export) are marked **not implemented** or deferred above.
+Known implementation constraints include heuristic document structuring, variable OCR quality, model-dependent advice, synchronous request-time AI work, in-memory rate limits, local-only file storage, and a mismatch between some backend APIs and currently reachable frontend screens. Scores and recruiter/trajectory estimates must not be represented as verified hiring outcomes.

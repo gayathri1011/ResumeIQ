@@ -186,17 +186,14 @@ export async function apiRequest<T>(
     });
 
   } catch {
-
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
     throw toApiClientError(
-
       0,
-
-      "network_error",
-
-      "Network connection lost. Check your internet connection and try again.",
-
+      isOffline ? "network_error" : "connection_error",
+      isOffline
+        ? "No internet connection detected. Please check your network and try again."
+        : "Could not connect to the server. Please make sure the service is running and try again.",
     );
-
   }
 
 
@@ -388,21 +385,16 @@ export function uploadFormData<T>(
 
 
     xhr.onerror = () => {
-
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
       reject(
-
         toApiClientError(
-
           0,
-
-          "network_error",
-
-          "Network error during upload.",
-
+          isOffline ? "network_error" : "connection_error",
+          isOffline
+            ? "No internet connection detected. Please check your network and try again."
+            : "Could not connect to the server. Please make sure the service is running and try again.",
         ),
-
       );
-
     };
 
 

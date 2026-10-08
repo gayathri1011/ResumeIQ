@@ -47,7 +47,7 @@ function DialogContent({
 }: {
   className?: string;
   children: React.ReactNode;
-  onClose: () => void;
+  onClose?: () => void;
 }) {
   return (
     <div
@@ -58,15 +58,17 @@ function DialogContent({
         className,
       )}
     >
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute right-3 top-3 z-10"
-        onClick={onClose}
-        aria-label="Close"
-      >
-        <X className="h-4 w-4" />
-      </Button>
+      {onClose ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute right-3 top-3 z-10"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      ) : null}
       {children}
     </div>
   );
@@ -117,6 +119,21 @@ function DialogBody({
   );
 }
 
+function DialogFooter({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 border-t p-4 sm:p-6",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 export {
   Dialog,
   DialogContent,
@@ -124,4 +141,5 @@ export {
   DialogTitle,
   DialogDescription,
   DialogBody,
+  DialogFooter,
 };

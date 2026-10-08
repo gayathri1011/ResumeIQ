@@ -14,10 +14,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { CompanyCombobox } from "@/features/job/CompanyCombobox";
 import { JobExtractionResults } from "@/features/job/JobExtractionResults";
 import { JobMatchResults } from "@/features/job/JobMatchResults";
 import { JobStepIndicator } from "@/features/job/JobStepIndicator";
@@ -190,7 +190,7 @@ export function JobAnalyzer() {
     <div className="mx-auto w-full max-w-4xl space-y-6">
       <PageHeader
         title="Job description analyzer"
-        description="Extract structured requirements from a job posting, then match them against your resume."
+        description="Paste a job description to compare it with your resume."
         backHref="/dashboard"
       />
       <Card>
@@ -200,19 +200,17 @@ export function JobAnalyzer() {
             Job description
           </CardTitle>
           <CardDescription>
-            Paste the full posting text. We&apos;ll extract skills, requirements,
-            and keywords — nothing is invented beyond what&apos;s in the text.
+            Paste the job posting to find key skills and requirements.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="company">Company (optional)</Label>
-              <Input
+              <Label htmlFor="company">Company name</Label>
+              <CompanyCombobox
                 id="company"
-                placeholder="e.g. Acme Corp"
                 value={company}
-                onChange={(event) => setCompany(event.target.value)}
+                onChange={setCompany}
                 disabled={isProcessing || isMatching}
               />
             </div>

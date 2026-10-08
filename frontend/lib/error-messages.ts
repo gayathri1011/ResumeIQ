@@ -37,8 +37,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   version_delete_last: "You cannot delete the only remaining version.",
   version_delete_master: "The master resume version cannot be deleted.",
   pdf_generation_failed: "Could not generate the PDF. Please try again.",
+  connection_error:
+    "Could not connect to the server. Please make sure the service is running and try again.",
   network_error:
-    "Network connection lost. Check your internet connection and try again.",
+    "No internet connection detected. Please check your network and try again.",
   parse_error: "Received an invalid response from the server. Please try again.",
   http_error: "Something went wrong. Please try again.",
   internal_error: "Something went wrong. Please try again.",
@@ -92,6 +94,7 @@ export function isRetryableErrorCode(code: string | undefined): boolean {
     code === "ai_rate_limit" ||
     code === "rate_limit_exceeded" ||
     code === "database_unavailable" ||
-    code === "network_error"
+    code === "network_error" ||
+    code === "connection_error"
   );
 }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -14,6 +15,8 @@ from pymongo.errors import (
 )
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class AppError(Exception):
@@ -132,6 +135,7 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def unhandled_error_handler(_: Request, exc: Exception) -> JSONResponse:
+        logger.exception("Unhandled server exception: %s", exc)
         return build_error_response(
             code="internal_error",
             message="An unexpected error occurred.",

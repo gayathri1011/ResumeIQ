@@ -65,7 +65,6 @@ export function SignupPage() {
     <AuthShell
       title="Create account"
       subtitle="Start telling your career story with ResumeIQ"
-      showAiMode={false}
       footer={
         <>
           Already have an account?{" "}

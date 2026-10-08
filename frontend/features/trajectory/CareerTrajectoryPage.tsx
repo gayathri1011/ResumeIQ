@@ -53,7 +53,7 @@ export function CareerTrajectoryPage() {
       <div className="mx-auto w-full max-w-5xl space-y-6">
         <PageHeader
           title="Career trajectory"
-          description="Discover where your career can go next based on the evidence in your resume."
+          description="Discover where your career can go next based on your resume."
           backHref={`/dashboard?${dashboardQuery.toString()}`}
         />
         <CareerTrajectory

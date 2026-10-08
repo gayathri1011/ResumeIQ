@@ -145,5 +145,19 @@ class AIAnalysisResultRepository(BaseRepository[AIAnalysisResult]):
             In(AIAnalysisResult.resume_analysis_id, analysis_ids)
         ).to_list()
 
+    async def list_by_resume(
+        self,
+        resume_id: uuid.UUID,
+        limit: int = 20,
+        skip: int = 0,
+    ) -> list[AIAnalysisResult]:
+        return (
+            await AIAnalysisResult.find(AIAnalysisResult.resume_id == resume_id)
+            .sort("-created_at")
+            .skip(skip)
+            .limit(limit)
+            .to_list()
+        )
+
     async def delete_by_resume_version_id(self, version_id: uuid.UUID) -> None:
         await AIAnalysisResult.find(AIAnalysisResult.resume_version_id == version_id).delete()

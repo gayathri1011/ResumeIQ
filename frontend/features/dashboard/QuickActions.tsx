@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { Briefcase, Compass, Eye, Upload } from "lucide-react";
+import {
+  Briefcase,
+  Compass,
+  Eye,
+  MessagesSquare,
+  TrendingUp,
+  Upload,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +38,20 @@ const ACTIONS = [
     icon: Briefcase,
   },
   {
+    key: "interview",
+    label: "Interview",
+    description: "Practice with an AI interviewer",
+    href: "/interview",
+    icon: MessagesSquare,
+  },
+  {
+    key: "growth",
+    label: "Career Growth",
+    description: "Get a plan for your dream role",
+    href: "/growth",
+    icon: TrendingUp,
+  },
+  {
     key: "career_trajectory",
     label: "Career Trajectory",
     description: "Discover where your career can go next",
@@ -48,6 +69,8 @@ const ACTIONS = [
 
 const VERSION_SCOPED_KEYS = new Set([
   "analyze_job",
+  "interview",
+  "growth",
   "career_trajectory",
   "recruiter_lens",
 ]);
@@ -59,13 +82,13 @@ export function QuickActions({ resumeId, versionId }: QuickActionsProps) {
         <CardTitle className="text-base">Quick actions</CardTitle>
         <CardDescription>Common next steps for your resume</CardDescription>
       </CardHeader>
-      <CardContent className="grid min-w-0 auto-rows-fr gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <CardContent className="grid min-w-0 auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {ACTIONS.map((action) => {
           const Icon = action.icon;
           const scoped =
             VERSION_SCOPED_KEYS.has(action.key) && resumeId;
           const href = scoped
-            ? `${action.href}?resumeId=${resumeId}${versionId ? `&versionId=${versionId}` : ""}`
+            ? `${action.href}?resumeId=${resumeId}&resume_id=${resumeId}${versionId ? `&versionId=${versionId}` : ""}`
             : action.href;
 
           return (

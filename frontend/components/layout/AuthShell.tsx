@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
 
 import {
   BrandLockup,
@@ -17,7 +16,6 @@ interface AuthShellProps {
   subtitle: string;
   footer?: React.ReactNode;
   className?: string;
-  showAiMode?: boolean;
 }
 
 export function AuthShell({
@@ -26,7 +24,6 @@ export function AuthShell({
   subtitle,
   footer,
   className,
-  showAiMode = true,
 }: AuthShellProps) {
   return (
     <main className="relative min-h-screen overflow-hidden bg-cream">
@@ -45,12 +42,6 @@ export function AuthShell({
 
       <header className="relative z-20 flex items-center justify-between px-5 py-5 sm:px-8">
         <BrandLockup href="/" />
-        {showAiMode ? (
-          <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-b from-card to-sand/50 px-3.5 py-2 text-sm font-medium text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_8px_18px_-12px_rgba(55,38,18,0.35)]">
-            <Sparkles className="h-3.5 w-3.5 text-gold" aria-hidden="true" />
-            AI Mode
-          </span>
-        ) : null}
       </header>
 
       <div className="relative z-10 flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center px-4 pb-10 pt-2">
