@@ -273,10 +273,7 @@ class InterviewService:
         answered_count = sum(1 for t in interview.turns if t.user_answer is not None)
         max_questions = max(1, min(10, interview.estimated_question_count))
 
-        should_terminate = (
-            answered_count >= max_questions
-            or eval_output.next_action == "wrap_up"
-        )
+        should_terminate = answered_count >= max_questions
 
         if should_terminate:
             interview.status = InterviewStatus.COMPLETED
@@ -434,15 +431,22 @@ class InterviewService:
         user_id: uuid.UUID,
     ) -> InterviewReportResponse:
         interview = await self.get_session(session_id, user_id)
-        if interview.status != InterviewStatus.COMPLETED:
+        if interview.report is None:
             interview.status = InterviewStatus.COMPLETED
-            interview.completed_at = datetime.now(UTC)
+            if not interview.completed_at:
+                interview.completed_at = datetime.now(UTC)
             report_dict = await self._generate_report(interview)
             interview.report = report_dict
-            interview.overall_score = report_dict["overall_score"]
+            interview.overall_score = report_dict.get("overall_score", 0)
             await self.repo.update(interview)
             await self.session.flush()
             await on_interview_completed(interview, self.session)
+        elif interview.status != InterviewStatus.COMPLETED:
+            interview.status = InterviewStatus.COMPLETED
+            if not interview.completed_at:
+                interview.completed_at = datetime.now(UTC)
+            await self.repo.update(interview)
+            await self.session.flush()
 
         return InterviewReportResponse.model_validate(interview.report)
 
@@ -453,12 +457,17 @@ class InterviewService:
     ) -> InterviewReportResponse:
         interview = await self.get_session(session_id, user_id)
         if interview.report is None:
-            # If not generated yet, generate report on-the-fly
+            # If not generated yet, generate report on-the-fly idempotently
             report_dict = await self._generate_report(interview)
             interview.report = report_dict
-            interview.overall_score = report_dict["overall_score"]
+            interview.overall_score = report_dict.get("overall_score", 0)
+            if interview.status != InterviewStatus.COMPLETED:
+                interview.status = InterviewStatus.COMPLETED
+                if not interview.completed_at:
+                    interview.completed_at = datetime.now(UTC)
             await self.repo.update(interview)
             await self.session.flush()
+            await on_interview_completed(interview, self.session)
         return InterviewReportResponse.model_validate(interview.report)
 
     async def _generate_report(self, interview: InterviewSession) -> dict[str, Any]:
@@ -600,15 +609,22 @@ class InterviewService:
         }
 
         # Query LLM only for narrative synthesis, but guarantee deterministic scores
-        ai_report = await self.ai_service.run_task(
-            "interview_report_v1",
-            report_inputs,
-            output_schema=InterviewReportOutput,
-            fallback_factory=lambda: fallback_interview_report(
+        try:
+            ai_report = await self.ai_service.run_task(
+                "interview_report_v1",
+                report_inputs,
+                output_schema=InterviewReportOutput,
+                fallback_factory=lambda: fallback_interview_report(
+                    target_role=interview.target_role,
+                    overall_score=overall_score,
+                ),
+            )
+        except Exception as exc:
+            logger.warning("AI generation failed for interview report: %s. Using deterministic fallback report.", exc)
+            ai_report = fallback_interview_report(
                 target_role=interview.target_role,
                 overall_score=overall_score,
-            ),
-        )
+            )
 
         narrative_summary = ai_report.summary if ai_report and hasattr(ai_report, "summary") and ai_report.summary else f"Interview session completed for {interview.target_role}."
         raw_recs = []

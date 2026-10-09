@@ -87,6 +87,7 @@ export interface InterviewSession {
   target_role: string;
   difficulty: InterviewDifficulty;
   interview_type: InterviewType;
+  estimated_question_count?: number;
   status: InterviewStatus;
   plan?: Record<string, any> | null;
   current_turn_index: number;

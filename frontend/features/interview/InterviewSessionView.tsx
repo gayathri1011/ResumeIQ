@@ -5,16 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   AlertCircle,
-  ArrowRight,
   BotMessageSquare,
-  CheckCircle,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  HelpCircle,
   Loader2,
+  Mic,
   Send,
-  Sparkles,
   StopCircle,
   Zap,
 } from "lucide-react";
@@ -25,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -68,9 +61,33 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
   const [isEndingSession, setIsEndingSession] = useState(false);
   const [showEndDialog, setShowEndDialog] = useState(false);
 
-  const [expandedTurns, setExpandedTurns] = useState<Record<number, boolean>>({});
+  // Web Speech API state
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [speechError, setSpeechError] = useState<string | null>(null);
 
   const answerTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<any>(null);
+  const textBeforeSpeechRef = useRef<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hasSpeech = Boolean(
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition,
+      );
+      setSpeechSupported(hasSpeech);
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, []);
 
   const fetchSession = async () => {
     try {
@@ -96,16 +113,85 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
       ? (session.turns[session.current_turn_index] ?? null)
       : null;
 
-  const toggleTurnExpand = (idx: number) => {
-    setExpandedTurns((prev) => ({
-      ...prev,
-      [idx]: !prev[idx],
-    }));
+  const toggleListening = () => {
+    if (isListening) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // ignore
+        }
+      }
+      setIsListening(false);
+      return;
+    }
+
+    if (typeof window === "undefined") return;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setSpeechError("Voice input works in Chrome and Edge.");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang =
+        typeof navigator !== "undefined" && navigator.language ? navigator.language : "en-US";
+
+      textBeforeSpeechRef.current = currentAnswer;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setSpeechError(null);
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = "";
+        for (let i = 0; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        const base = textBeforeSpeechRef.current;
+        const separator = base && !base.endsWith(" ") && !base.endsWith("\n") ? " " : "";
+        setCurrentAnswer(base + separator + transcript);
+      };
+
+      recognition.onerror = (event: any) => {
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          setSpeechError("Microphone permission was denied.");
+        } else if (event.error !== "no-speech") {
+          setSpeechError("Voice input stopped.");
+        }
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch {
+      setSpeechError("Could not start microphone.");
+      setIsListening(false);
+    }
   };
 
   const handleSubmitAnswer = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!session || !activeTurn || isSubmittingAnswer) return;
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore
+      }
+    }
+    setIsListening(false);
 
     const trimmed = currentAnswer.trim();
     if (!trimmed) {
@@ -141,6 +227,15 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
   };
 
   const handleEndEarly = async () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore
+      }
+    }
+    setIsListening(false);
+
     setIsEndingSession(true);
     setShowEndDialog(false);
     try {
@@ -181,8 +276,9 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
   }
 
   const completedTurns = session.turns.filter((t) => t.user_answer !== null);
-  const plannedCount = session.plan?.estimated_question_count || 5;
-  const currentTurnDisplay = Math.min(session.current_turn_index + 1, plannedCount);
+  const plannedCount =
+    session.estimated_question_count || session.plan?.estimated_question_count || session.turns.length || 5;
+  const currentTurnDisplay = Math.min(plannedCount, Math.max(1, completedTurns.length + 1));
   const progressPercent = Math.min(100, Math.round((completedTurns.length / plannedCount) * 100));
 
   return (
@@ -240,12 +336,16 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="ghost" onClick={() => setShowEndDialog(false)}>
-              Keep Practicing
+            <Button
+              variant="outline"
+              onClick={() => setShowEndDialog(false)}
+              disabled={isEndingSession}
+            >
+              Continue Practice
             </Button>
             <Button
-              variant="destructive"
-              onClick={handleEndEarly}
+              variant="default"
+              onClick={() => void handleEndEarly()}
               disabled={isEndingSession}
               className="gap-2"
             >
@@ -263,7 +363,7 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs">
-                  Q{activeTurn.turn_index + 1}
+                  Q{currentTurnDisplay}
                 </span>
                 <Badge variant="secondary" className="capitalize text-xs font-normal">
                   {activeTurn.category}
@@ -274,8 +374,8 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
                   </Badge>
                 )}
               </div>
-              <div className="text-xs text-muted-foreground">
-                Question {activeTurn.turn_index + 1} of {plannedCount}
+              <div className="text-xs text-muted-foreground font-medium">
+                Question {currentTurnDisplay} of {plannedCount}
               </div>
             </div>
             <CardTitle className="text-lg sm:text-xl font-semibold leading-relaxed pt-1 text-foreground">
@@ -320,7 +420,7 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
                   onChange={(e) => setCurrentAnswer(e.target.value)}
                   disabled={isSubmittingAnswer}
                   rows={6}
-                  placeholder="Type your answer here. Explain your approach, key decisions, and real-world experience..."
+                  placeholder="Type your answer here, or click the mic to speak..."
                   className="w-full rounded-md border border-input bg-background/90 px-3.5 py-3 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 resize-y"
                   onKeyDown={(e) => {
                     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -329,8 +429,13 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
                     }
                   }}
                 />
+                {speechError && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 px-1">{speechError}</p>
+                )}
                 <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                  <span>Press <kbd className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono border">Ctrl+Enter</kbd> to submit</span>
+                  <span>
+                    Press <kbd className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono border">Ctrl+Enter</kbd> to submit
+                  </span>
                   <span>{currentAnswer.length} characters</span>
                 </div>
               </div>
@@ -339,133 +444,65 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
             <CardFooter className="flex items-center justify-between border-t border-border/40 pt-4 pb-4">
               <div className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Zap className="h-3.5 w-3.5 text-amber-500" />
-                <span>Checks your technical answers and communication</span>
+                <span>Answers adjust follow-up questions in real time</span>
               </div>
 
-              <Button
-                type="submit"
-                disabled={isSubmittingAnswer || !currentAnswer.trim()}
-                className="gap-2 shadow-sm font-medium"
-              >
-                {isSubmittingAnswer ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Checking your answer...
-                  </>
-                ) : (
-                  <>
-                    <span>Submit Answer</span>
-                    <Send className="h-4 w-4" />
-                  </>
+              <div className="flex items-center gap-2">
+                {isListening && (
+                  <span className="flex items-center gap-1.5 text-xs text-primary font-medium animate-pulse mr-1">
+                    <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
+                    Listening...
+                  </span>
                 )}
-              </Button>
+                {speechSupported ? (
+                  <Button
+                    type="button"
+                    variant={isListening ? "default" : "outline"}
+                    size="sm"
+                    onClick={toggleListening}
+                    disabled={isSubmittingAnswer}
+                    aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                    title={isListening ? "Click to stop listening" : "Click to speak your answer"}
+                    className={`h-9 px-3 gap-1.5 transition-all ${
+                      isListening
+                        ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Mic className="h-4 w-4" />
+                    <span className="text-xs">{isListening ? "Stop" : "Mic"}</span>
+                  </Button>
+                ) : (
+                  <span
+                    className="text-xs text-muted-foreground p-2"
+                    title="Voice input works in Chrome and Edge"
+                  >
+                    <Mic className="h-4 w-4 opacity-40" />
+                  </span>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={isSubmittingAnswer || !currentAnswer.trim()}
+                  className="gap-2 shadow-sm font-medium"
+                >
+                  {isSubmittingAnswer ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving your answer...
+                    </>
+                  ) : (
+                    <>
+                      <span>Submit Answer</span>
+                      <Send className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </div>
             </CardFooter>
           </form>
         </Card>
       ) : null}
-
-      {/* Conversation & Evaluation History */}
-      {completedTurns.length > 0 && (
-        <div className="space-y-4 pt-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-emerald-600" />
-              Questions answered ({completedTurns.length})
-            </h2>
-          </div>
-
-          <div className="space-y-3">
-            {completedTurns.map((turn) => {
-              const isExpanded = expandedTurns[turn.turn_index] ?? true;
-              const evalData = turn.evaluation;
-              const score = evalData?.score ?? (turn.turn_score ? Math.round(turn.turn_score / 10) : null);
-
-              return (
-                <Card key={turn.turn_index} className="border-border/60 bg-card/60 overflow-hidden">
-                  <div
-                    onClick={() => toggleTurnExpand(turn.turn_index)}
-                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 min-w-0 pr-2">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground font-semibold text-xs">
-                        Q{turn.turn_index + 1}
-                      </span>
-                      <div className="truncate font-medium text-sm text-foreground">
-                        {turn.question}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      {score !== null && (
-                        <Badge
-                          variant={score >= 7 ? "secondary" : score >= 5 ? "outline" : "high"}
-                          className="font-mono text-xs"
-                        >
-                          {score}/10
-                        </Badge>
-                      )}
-                      {isExpanded ? (
-                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                  </div>
-
-                  {isExpanded && (
-                    <CardContent className="border-t border-border/40 space-y-4 pt-4 bg-muted/10 text-sm">
-                      <div>
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                          Your Answer
-                        </div>
-                        <p className="text-foreground/90 whitespace-pre-wrap bg-background/80 p-3 rounded-md border border-border/40 text-xs sm:text-sm">
-                          {turn.user_answer}
-                        </p>
-                      </div>
-
-                      {evalData && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                          {evalData.strengths?.length > 0 && (
-                            <div className="space-y-1 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 rounded-md border border-emerald-500/20">
-                              <div className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">
-                                What you did well
-                              </div>
-                              <ul className="text-xs space-y-1 text-emerald-900 dark:text-emerald-300 list-disc list-inside">
-                                {evalData.strengths.map((str, sIdx) => (
-                                  <li key={sIdx}>{str}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {evalData.missing_points?.length > 0 && (
-                            <div className="space-y-1 bg-amber-50/50 dark:bg-amber-950/20 p-3 rounded-md border border-amber-500/20">
-                              <div className="text-xs font-semibold text-amber-800 dark:text-amber-400">
-                                Things to improve
-                              </div>
-                              <ul className="text-xs space-y-1 text-amber-900 dark:text-amber-300 list-disc list-inside">
-                                {evalData.missing_points.map((miss, mIdx) => (
-                                  <li key={mIdx}>{miss}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {evalData.feedback && (
-                            <div className="md:col-span-2 text-xs text-muted-foreground bg-muted/40 p-2.5 rounded border border-border/30">
-                              <span className="font-semibold text-foreground">Feedback: </span>
-                              {evalData.feedback}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </CardContent>
-                  )}
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

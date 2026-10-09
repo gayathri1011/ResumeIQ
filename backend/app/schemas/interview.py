@@ -70,6 +70,7 @@ class InterviewSessionResponse(BaseModel):
     target_role: str
     difficulty: str
     interview_type: str
+    estimated_question_count: int = 5
     status: str
     plan: dict[str, Any] | None = None
     current_turn_index: int = 0

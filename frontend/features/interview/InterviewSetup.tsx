@@ -65,15 +65,15 @@ export function InterviewSetup() {
   const querySkills = searchParams.get("skills") || "";
 
   const [mode, setMode] = useState<TargetMode>(queryJobId ? "matched_job" : "role");
-  const [targetRole, setTargetRole] = useState(queryRole || "Senior Backend Engineer");
+  const [targetRole, setTargetRole] = useState(queryRole || "");
   const [jobDescriptionText, setJobDescriptionText] = useState("");
   const [jobId, setJobId] = useState(queryJobId);
-  const [difficulty, setDifficulty] = useState<InterviewDifficulty>("mid");
-  const [interviewType, setInterviewType] = useState<InterviewType>("mixed");
-  const [questionCount, setQuestionCount] = useState<number>(5);
+  const [difficulty, setDifficulty] = useState<InterviewDifficulty | "">("");
+  const [interviewType, setInterviewType] = useState<InterviewType | "">("");
+  const [questionCount, setQuestionCount] = useState<number | "">("");
   const [focusSkillInput, setFocusSkillInput] = useState("");
   const [focusSkills, setFocusSkills] = useState<string[]>(
-    querySkills ? querySkills.split(",").map((s) => s.trim()).filter(Boolean) : ["API Architecture", "Problem Solving"]
+    querySkills ? querySkills.split(",").map((s) => s.trim()).filter(Boolean) : []
   );
 
   const [resumes, setResumes] = useState<ResumeListItem[]>([]);
@@ -82,6 +82,8 @@ export function InterviewSetup() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const isReadyToStart = Boolean(targetRole.trim() && difficulty && interviewType && questionCount);
 
   useEffect(() => {
     async function fetchResumes() {
@@ -123,15 +125,27 @@ export function InterviewSetup() {
       setErrorMessage("Please enter a target role or job title.");
       return;
     }
+    if (!difficulty) {
+      setErrorMessage("Please select an experience level.");
+      return;
+    }
+    if (!interviewType) {
+      setErrorMessage("Please select a question style.");
+      return;
+    }
+    if (!questionCount) {
+      setErrorMessage("Please select the number of questions.");
+      return;
+    }
 
     setIsSubmitting(true);
 
     try {
       const payload: CreateInterviewSessionRequest = {
         target_role: targetRole.trim(),
-        difficulty,
-        interview_type: interviewType,
-        estimated_question_count: Number(questionCount) || 5,
+        difficulty: difficulty as InterviewDifficulty,
+        interview_type: interviewType as InterviewType,
+        estimated_question_count: Number(questionCount),
         focus_skills: focusSkills,
         focus_areas: focusSkills,
         resume_id: selectedResumeId ? selectedResumeId : undefined,
@@ -256,6 +270,9 @@ export function InterviewSetup() {
                 placeholder="e.g. Junior GenAI Engineer, Staff SRE, Product Engineer"
                 required
               />
+              {!targetRole.trim() && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">Please enter a role or job title.</p>
+              )}
             </div>
 
             {mode === "job_desc" && (
@@ -325,7 +342,12 @@ export function InterviewSetup() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-3">
-              <Label>Experience level</Label>
+              <div className="flex items-center justify-between">
+                <Label>Experience level *</Label>
+                {!difficulty && (
+                  <span className="text-xs text-amber-600 dark:text-amber-400">Please choose a level</span>
+                )}
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {DIFFICULTY_OPTIONS.map((opt) => (
                   <button
@@ -346,7 +368,12 @@ export function InterviewSetup() {
             </div>
 
             <div className="space-y-3">
-              <Label>Question style</Label>
+              <div className="flex items-center justify-between">
+                <Label>Question style *</Label>
+                {!interviewType && (
+                  <span className="text-xs text-amber-600 dark:text-amber-400">Please choose a style</span>
+                )}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {TYPE_OPTIONS.map((opt) => (
                   <button
@@ -368,24 +395,35 @@ export function InterviewSetup() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="questionCount">Number of questions</Label>
-                <span className="text-sm font-semibold text-primary">{questionCount} Questions</span>
+                <Label htmlFor="questionCount">Number of questions *</Label>
+                {questionCount ? (
+                  <span className="text-sm font-semibold text-primary">{questionCount} Questions</span>
+                ) : (
+                  <span className="text-xs text-amber-600 dark:text-amber-400">Required</span>
+                )}
               </div>
               <select
                 id="questionCount"
                 value={questionCount}
-                onChange={(e) => setQuestionCount(Number(e.target.value))}
+                onChange={(e) => setQuestionCount(e.target.value ? Number(e.target.value) : "")}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
+                <option value="">Select number of questions</option>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                   <option key={num} value={num}>
                     {num} {num === 1 ? "question" : "questions"}
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-muted-foreground">
-                Choose between 1 and 10 questions (default is 5).
-              </p>
+              {!questionCount ? (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Please select between 1 and 10 questions to practice.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  The interview will adapt to your answers across these {questionCount} questions.
+                </p>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -434,7 +472,7 @@ export function InterviewSetup() {
             type="button"
             size="lg"
             onClick={handleStart}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !isReadyToStart}
             className="w-full sm:w-auto min-w-[200px] gap-2 font-semibold shadow-md"
           >
             {isSubmitting ? (
