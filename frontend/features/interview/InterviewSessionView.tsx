@@ -67,8 +67,14 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
 
   const answerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
-  const shouldListenRef = useRef(false);
-  const baseTextRef = useRef<string>("");
+  const wantListeningRef = useRef(false);
+  const valueRef = useRef("");
+  const baseRef = useRef("");
+  const finalRef = useRef("");
+
+  useEffect(() => {
+    valueRef.current = currentAnswer;
+  }, [currentAnswer]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -79,7 +85,7 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
     }
 
     return () => {
-      shouldListenRef.current = false;
+      wantListeningRef.current = false;
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
@@ -115,7 +121,7 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
       : null;
 
   const stopListening = () => {
-    shouldListenRef.current = false;
+    wantListeningRef.current = false;
     setIsListening(false);
     if (recognitionRef.current) {
       try {
@@ -137,93 +143,94 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
     }
 
     setSpeechError(null);
-    baseTextRef.current = currentAnswer;
-    shouldListenRef.current = true;
+    baseRef.current = valueRef.current;
+    finalRef.current = "";
+    wantListeningRef.current = true;
 
     try {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch {
-          // ignore
-        }
-      }
+      if (!recognitionRef.current) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang =
+          typeof navigator !== "undefined" && navigator.language ? navigator.language : "en-US";
 
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang =
-        typeof navigator !== "undefined" && navigator.language ? navigator.language : "en-US";
+        recognition.onstart = () => {
+          setIsListening(true);
+          setSpeechError(null);
+        };
 
-      recognition.onstart = () => {
-        setIsListening(true);
-        setSpeechError(null);
-      };
-
-      recognition.onresult = (event: any) => {
-        let finalTranscript = "";
-        let interimTranscript = "";
-
-        for (let i = 0; i < event.results.length; i++) {
-          const item = event.results[i];
-          if (item.isFinal) {
-            finalTranscript += item[0].transcript;
-          } else {
-            interimTranscript += item[0].transcript;
+        recognition.onresult = (e: any) => {
+          let interim = "";
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const r = e.results[i];
+            if (r && r[0] && r.isFinal) {
+              finalRef.current += r[0].transcript + " ";
+            } else if (r && r[0]) {
+              interim += r[0].transcript;
+            }
           }
-        }
+          const base = baseRef.current;
+          const sep = base && !/\s$/.test(base) ? " " : "";
+          const nextAnswer = (base + sep + finalRef.current + interim).trimStart();
+          setCurrentAnswer(nextAnswer);
+          valueRef.current = nextAnswer;
+        };
 
-        const base = baseTextRef.current.trim();
-        const finalClean = finalTranscript.trim();
-        const interimClean = interimTranscript.trim();
+        recognition.onerror = (event: any) => {
+          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+            wantListeningRef.current = false;
+            setIsListening(false);
+            setSpeechError("Microphone access is blocked. Allow it in your browser settings.");
+          } else if (event.error === "audio-capture") {
+            wantListeningRef.current = false;
+            setIsListening(false);
+            setSpeechError("No microphone found.");
+          } else if (event.error === "network") {
+            wantListeningRef.current = false;
+            setIsListening(false);
+            setSpeechError("Voice input needs an internet connection.");
+          } else if (event.error === "no-speech" || event.error === "aborted") {
+            // Ignore silently
+          } else {
+            wantListeningRef.current = false;
+            setIsListening(false);
+            setSpeechError("Voice input stopped.");
+          }
+        };
 
-        const parts = [base, finalClean, interimClean].filter(Boolean);
-        setCurrentAnswer(parts.join(" "));
-      };
-
-      recognition.onerror = (event: any) => {
-        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-          shouldListenRef.current = false;
-          setIsListening(false);
-          setSpeechError("Microphone access is blocked. Allow it in your browser settings.");
-        } else if (event.error === "no-speech") {
-          // Quietly ignore; onend will restart if continuous mode stopped
-        } else {
-          // Other errors: stop quietly
-          shouldListenRef.current = false;
-          setIsListening(false);
-        }
-      };
-
-      recognition.onend = () => {
-        if (shouldListenRef.current) {
-          setCurrentAnswer((prev) => {
-            baseTextRef.current = prev;
-            return prev;
-          });
-          try {
-            recognition.start();
-            return;
-          } catch {
-            shouldListenRef.current = false;
+        recognition.onend = () => {
+          if (wantListeningRef.current) {
+            baseRef.current = valueRef.current;
+            finalRef.current = "";
+            try {
+              recognition.start();
+              return;
+            } catch {
+              wantListeningRef.current = false;
+              setIsListening(false);
+            }
+          } else {
             setIsListening(false);
           }
-        } else {
-          setIsListening(false);
-        }
-      };
+        };
 
-      recognitionRef.current = recognition;
-      recognition.start();
+        recognitionRef.current = recognition;
+      }
+
+      recognitionRef.current.start();
     } catch {
-      shouldListenRef.current = false;
-      setIsListening(false);
-      setSpeechError("Could not start microphone.");
+      // If recognition is already starting or running, ignore or retry
+      try {
+        recognitionRef.current?.start();
+      } catch {
+        // ignore
+      }
     }
   };
 
   const toggleListening = () => {
-    if (isListening) {
+    if (isListening || wantListeningRef.current) {
       stopListening();
     } else {
       startListening();
@@ -234,7 +241,15 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
     if (e) e.preventDefault();
     if (!session || !activeTurn || isSubmittingAnswer) return;
 
-    stopListening();
+    wantListeningRef.current = false;
+    setIsListening(false);
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch {
+        // ignore
+      }
+    }
 
     const trimmed = currentAnswer.trim();
     if (!trimmed) {
@@ -253,7 +268,9 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
       );
 
       setCurrentAnswer("");
-      baseTextRef.current = "";
+      valueRef.current = "";
+      baseRef.current = "";
+      finalRef.current = "";
 
       if (evaluation.is_complete) {
         router.push(`/interview/${sessionId}/report`);
@@ -271,7 +288,15 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
   };
 
   const handleEndEarly = async () => {
-    stopListening();
+    wantListeningRef.current = false;
+    setIsListening(false);
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch {
+        // ignore
+      }
+    }
 
     setIsEndingSession(true);
     setShowEndDialog(false);
@@ -457,7 +482,7 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
                     value={currentAnswer}
                     onChange={(e) => {
                       setCurrentAnswer(e.target.value);
-                      baseTextRef.current = e.target.value;
+                      valueRef.current = e.target.value;
                     }}
                     disabled={isSubmittingAnswer}
                     rows={6}
