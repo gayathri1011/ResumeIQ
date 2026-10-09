@@ -21,6 +21,27 @@ class CreateInterviewSessionRequest(BaseModel):
     focus_areas: list[str] = Field(default_factory=list)
     focus_skills: list[str] = Field(default_factory=list)
 
+    @field_validator("resume_id", "resume_version_id", "job_description_id", mode="before")
+    @classmethod
+    def coerce_empty_uuid_to_none(cls, value: Any) -> Any:
+        if not value or str(value).strip() in ("", "none", "null", "undefined"):
+            return None
+        try:
+            return uuid.UUID(str(value))
+        except (ValueError, TypeError, AttributeError):
+            return None
+
+    @field_validator("estimated_question_count", mode="before")
+    @classmethod
+    def coerce_question_count(cls, value: Any) -> int:
+        if value is None or value == "":
+            return 5
+        try:
+            val = int(value)
+            return max(1, min(10, val))
+        except (ValueError, TypeError):
+            return 5
+
     @field_validator("target_role")
     @classmethod
     def validate_target_role(cls, value: str) -> str:
@@ -144,10 +165,50 @@ class InterviewReportResponse(BaseModel):
         if not isinstance(data, dict):
             return data
         copied = dict(data)
+        if "session_id" not in copied and "id" in copied:
+            copied["session_id"] = copied["id"]
+
+        if copied.get("overall_score") is None:
+            copied["overall_score"] = 0
+        else:
+            try:
+                copied["overall_score"] = max(0, min(100, int(copied["overall_score"])))
+            except (ValueError, TypeError):
+                copied["overall_score"] = 0
+
+        if not copied.get("readiness_status"):
+            score = copied["overall_score"]
+            copied["readiness_status"] = "interview_ready" if score >= 75 else ("progressing" if score >= 60 else "needs_work")
+
+        if not copied.get("summary"):
+            copied["summary"] = f"Interview session completed for {copied.get('target_role', 'your role')}."
+
+        if not copied.get("target_role"):
+            copied["target_role"] = "Software Engineer"
+
+        if not copied.get("difficulty"):
+            copied["difficulty"] = "mid"
+
         if not copied.get("ordered_practice_areas") and copied.get("ordered_next_practice_areas"):
             copied["ordered_practice_areas"] = list(copied["ordered_next_practice_areas"])
         elif not copied.get("ordered_next_practice_areas") and copied.get("ordered_practice_areas"):
             copied["ordered_next_practice_areas"] = list(copied["ordered_practice_areas"])
+
+        for list_field in (
+            "strong_areas",
+            "weak_areas",
+            "resume_claims_tested",
+            "actionable_recommendations",
+            "ordered_next_practice_areas",
+            "ordered_practice_areas",
+            "skill_evaluations",
+        ):
+            if copied.get(list_field) is None:
+                copied[list_field] = []
+
+        for dict_field in ("category_scores", "skill_scores"):
+            if copied.get(dict_field) is None:
+                copied[dict_field] = {}
 
         if not copied.get("skill_scores") and copied.get("skill_evaluations"):
             copied["skill_scores"] = {

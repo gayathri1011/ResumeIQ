@@ -194,17 +194,17 @@ class InterviewService:
             next_turn_resp = None
             if turn_index + 1 < len(interview.turns):
                 next_turn_resp = InterviewTurnResponse.model_validate(interview.turns[turn_index + 1].model_dump())
-            stored_eval = target_turn.evaluation
+            stored_eval = target_turn.evaluation if isinstance(target_turn.evaluation, dict) else {}
             return TurnEvaluationResponse(
                 turn_index=turn_index,
-                score=stored_eval.get("score", 7),
-                dimension_scores=stored_eval.get("dimension_scores", {}),
-                strengths=stored_eval.get("strengths", []),
-                missing_points=stored_eval.get("missing_points", []),
-                feedback=stored_eval.get("feedback", ""),
-                next_question_direction=stored_eval.get("next_question_direction", ""),
-                resume_claim_status=stored_eval.get("resume_claim_status", "n/a"),
-                skill_tags=stored_eval.get("skill_tags", []),
+                score=stored_eval.get("score") if stored_eval.get("score") is not None else 7,
+                dimension_scores=stored_eval.get("dimension_scores") or {},
+                strengths=stored_eval.get("strengths") or [],
+                missing_points=stored_eval.get("missing_points") or stored_eval.get("areas_for_improvement") or [],
+                feedback=stored_eval.get("feedback") or "",
+                next_question_direction=stored_eval.get("next_question_direction") or "",
+                resume_claim_status=stored_eval.get("resume_claim_status") or "n/a",
+                skill_tags=stored_eval.get("skill_tags") or [],
                 is_complete=is_complete,
                 next_turn=next_turn_resp,
             )
@@ -467,51 +467,75 @@ class InterviewService:
             if t.user_answer is not None and t.evaluation is not None
         ]
 
-        # Deterministic overall readiness /100 aggregation
+        # Fast and reliable fallback for sessions ended before answering questions
         if not answered_turns:
-            overall_score = 0
-            readiness_status = "needs_work"
-        else:
-            turn_scores = [t.evaluation.get("score", 7) * 10 for t in answered_turns]
-            overall_score = max(0, min(100, round(sum(turn_scores) / len(turn_scores))))
+            return {
+                "session_id": interview.id,
+                "target_role": interview.target_role,
+                "difficulty": interview.difficulty,
+                "overall_score": 0,
+                "readiness_status": "needs_work",
+                "summary": f"Practice session for {interview.target_role} concluded before questions were answered. Practice at least 1-2 questions to receive detailed feedback.",
+                "category_scores": {cat: 0 for cat in REPORT_CATEGORIES},
+                "strong_areas": ["Started mock interview session."],
+                "weak_areas": ["No answers completed yet."],
+                "resume_claims_tested": [],
+                "actionable_recommendations": [
+                    "Answer at least 1-2 questions to receive in-depth assessment and scoring.",
+                    f"Practice key technical concepts for {interview.target_role}.",
+                ],
+                "ordered_next_practice_areas": ["Core Fundamentals", "Problem Solving"],
+                "ordered_practice_areas": ["Core Fundamentals", "Problem Solving"],
+                "skill_evaluations": [],
+                "skill_scores": {},
+                "turns_evaluated": 0,
+                "completed_at": interview.completed_at,
+            }
 
-            if overall_score >= 85:
-                readiness_status = "strong_fit"
-            elif overall_score >= 75:
-                readiness_status = "interview_ready"
-            elif overall_score >= 60:
-                readiness_status = "progressing"
-            else:
-                readiness_status = "needs_work"
+        # Deterministic overall readiness /100 aggregation
+        turn_scores = [
+            ((t.evaluation.get("score") if isinstance(t.evaluation, dict) else 7) or 7) * 10
+            for t in answered_turns
+        ]
+        overall_score = max(0, min(100, round(sum(turn_scores) / len(turn_scores)))) if turn_scores else 0
+
+        if overall_score >= 85:
+            readiness_status = "strong_fit"
+        elif overall_score >= 75:
+            readiness_status = "interview_ready"
+        elif overall_score >= 60:
+            readiness_status = "progressing"
+        else:
+            readiness_status = "needs_work"
 
         # Deterministic category score aggregation from dimensions
-        if not answered_turns:
-            category_scores = {cat: 0 for cat in REPORT_CATEGORIES}
-        else:
-            def _avg_dims(*dim_names: str) -> int:
-                vals = []
-                for t in answered_turns:
-                    dims = t.evaluation.get("dimension_scores", {})
-                    for d in dim_names:
-                        if d in dims:
-                            vals.append(dims[d] * 10)
-                if not vals:
-                    return overall_score
-                return max(0, min(100, round(sum(vals) / len(vals))))
+        def _avg_dims(*dim_names: str) -> int:
+            vals = []
+            for t in answered_turns:
+                dims = (t.evaluation.get("dimension_scores") if isinstance(t.evaluation, dict) else {}) or {}
+                for d in dim_names:
+                    if isinstance(dims, dict) and d in dims and dims[d] is not None:
+                        try:
+                            vals.append(int(dims[d]) * 10)
+                        except (ValueError, TypeError):
+                            pass
+            if not vals:
+                return overall_score
+            return max(0, min(100, round(sum(vals) / len(vals))))
 
-            category_scores = {
-                "Technical Knowledge": _avg_dims("technical_correctness", "depth"),
-                "Project Understanding": _avg_dims("resume_evidence", "depth"),
-                "Problem Solving": _avg_dims("reasoning", "completeness"),
-                "Communication": _avg_dims("communication", "clarity"),
-                "Role Alignment": _avg_dims("role_relevance", "relevance"),
-                "Behavioral Readiness": _avg_dims("communication", "reasoning", "relevance"),
-            }
+        category_scores = {
+            "Technical Knowledge": _avg_dims("technical_correctness", "depth"),
+            "Project Understanding": _avg_dims("resume_evidence", "depth"),
+            "Problem Solving": _avg_dims("reasoning", "completeness"),
+            "Communication": _avg_dims("communication", "clarity"),
+            "Role Alignment": _avg_dims("role_relevance", "relevance"),
+            "Behavioral Readiness": _avg_dims("communication", "reasoning", "relevance"),
+        }
 
         # Deterministic tested resume claims
         claims_tested: list[dict[str, Any]] = []
         for t in answered_turns:
-            status = t.evaluation.get("resume_claim_status", "n/a")
+            status = (t.evaluation.get("resume_claim_status") if isinstance(t.evaluation, dict) else None) or "n/a"
             if status in ("validated", "weak"):
                 claims_tested.append({
                     "claim": f"Tested in Question {t.turn_index + 1} ({t.skill_tag})",
@@ -522,28 +546,33 @@ class InterviewService:
         # Deterministic skill evaluations for Phase 3 Career Growth Engine
         skill_scores_map: dict[str, list[int]] = {}
         for t in answered_turns:
-            score_val = t.evaluation.get("score", 7) * 10
-            tags = t.evaluation.get("skill_tags") or [t.skill_tag]
+            eval_dict = t.evaluation if isinstance(t.evaluation, dict) else {}
+            score_val = ((eval_dict.get("score") if eval_dict else 7) or 7) * 10
+            tags = (eval_dict.get("skill_tags") if eval_dict else None) or [t.skill_tag]
             for tag in tags:
-                skill_scores_map.setdefault(tag, []).append(score_val)
+                if tag:
+                    skill_scores_map.setdefault(tag, []).append(score_val)
 
         skill_evaluations = [
             {
                 "skill": tag,
-                "score": round(sum(scores) / len(scores)),
-                "evidence_summary": f"Tested in {len(scores)} response(s) with composite average {round(sum(scores) / len(scores))}/100.",
+                "score": round(sum(scores) / len(scores)) if scores else overall_score,
+                "evidence_summary": f"Tested in {len(scores)} response(s) with composite average {round(sum(scores) / len(scores)) if scores else overall_score}/100.",
             }
             for tag, scores in skill_scores_map.items()
+            if scores
         ]
 
         # Gather strengths and missing points
         demonstrated_strengths: list[str] = []
         verified_gaps: list[str] = []
         for t in answered_turns:
-            for s in t.evaluation.get("strengths", []):
+            eval_dict = t.evaluation if isinstance(t.evaluation, dict) else {}
+            for s in (eval_dict.get("strengths") or []):
                 if s and s not in demonstrated_strengths:
                     demonstrated_strengths.append(s)
-            for m in t.evaluation.get("missing_points", []):
+            missing = (eval_dict.get("missing_points") or eval_dict.get("areas_for_improvement") or [])
+            for m in (missing or []):
                 if m and m not in verified_gaps:
                     verified_gaps.append(m)
 
@@ -555,13 +584,14 @@ class InterviewService:
         # Transcript formatted for narrative synthesis
         transcript_lines = []
         for t in answered_turns:
+            eval_dict = t.evaluation if isinstance(t.evaluation, dict) else {}
             transcript_lines.append(f"Turn {t.turn_index + 1} [{t.category}] ({t.skill_tag}):")
             transcript_lines.append(f"Q: {t.question}")
             transcript_lines.append(f"A: {t.user_answer}")
-            transcript_lines.append(f"Evaluation Score: {t.evaluation.get('score')}/10 | Feedback: {t.evaluation.get('feedback')}")
+            transcript_lines.append(f"Evaluation Score: {eval_dict.get('score', 7)}/10 | Feedback: {eval_dict.get('feedback', '')}")
             transcript_lines.append("")
 
-        transcript_str = "\n".join(transcript_lines) or "No turns completed."
+        transcript_str = "\n".join(transcript_lines) or "Candidate answered questions in mock interview."
 
         report_inputs = {
             "target_role": interview.target_role,
@@ -580,19 +610,25 @@ class InterviewService:
             ),
         )
 
-        narrative_summary = ai_report.summary
-        recommendations = list(dict.fromkeys(ai_report.actionable_recommendations or ai_report.key_recommendations))
+        narrative_summary = ai_report.summary if ai_report and hasattr(ai_report, "summary") and ai_report.summary else f"Interview session completed for {interview.target_role}."
+        raw_recs = []
+        if ai_report:
+            raw_recs = getattr(ai_report, "actionable_recommendations", None) or getattr(ai_report, "key_recommendations", None) or []
+        recommendations = list(dict.fromkeys(raw_recs))
         if not recommendations:
             recommendations = [
                 f"Continue practicing structured problem solving and technical depth in {interview.target_role}.",
                 "Reinforce production failure modes and trade-off explanations in responses.",
             ]
 
-        ordered_practice = list(dict.fromkeys(
-            ai_report.ordered_next_practice_areas or [t.skill_tag for t in answered_turns if t.evaluation.get("score", 7) < 7]
-        ))
+        raw_ordered = []
+        if ai_report:
+            raw_ordered = getattr(ai_report, "ordered_next_practice_areas", None) or []
+        if not raw_ordered:
+            raw_ordered = [t.skill_tag for t in answered_turns if ((t.evaluation.get("score") if isinstance(t.evaluation, dict) else 7) or 7) < 7]
+        ordered_practice = list(dict.fromkeys(raw_ordered))
         if not ordered_practice:
-            ordered_practice = [t.skill_tag for t in answered_turns[:2]] or ["System Reliability", "Core Fundamentals"]
+            ordered_practice = [t.skill_tag for t in answered_turns[:2] if t.skill_tag] or ["System Reliability", "Core Fundamentals"]
 
         return {
             "session_id": interview.id,
@@ -609,7 +645,7 @@ class InterviewService:
             "ordered_next_practice_areas": ordered_practice[:5],
             "ordered_practice_areas": ordered_practice[:5],
             "skill_evaluations": skill_evaluations,
-            "skill_scores": {tag: round(sum(scores) / len(scores)) for tag, scores in skill_scores_map.items()},
+            "skill_scores": {tag: round(sum(scores) / len(scores)) for tag, scores in skill_scores_map.items() if scores},
             "turns_evaluated": len(answered_turns),
             "completed_at": interview.completed_at,
         }

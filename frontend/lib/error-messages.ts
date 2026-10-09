@@ -1,12 +1,12 @@
 import type { ApiClientError } from "@/lib/api-client";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  unauthorized: "Please log in to continue.",
+  unauthorized: "Please log in again.",
   invalid_credentials: "Invalid email or password.",
-  invalid_token: "Your session is invalid. Please log in again.",
-  token_expired: "Your session has expired. Please log in again.",
+  invalid_token: "Please log in again.",
+  token_expired: "Please log in again.",
   email_already_registered: "An account with this email already exists.",
-  validation_error: "Please check your input and try again.",
+  validation_error: "Please check your details and try again.",
   invalid_file_type: "Only PDF, DOCX, and image files (PNG, JPG, WEBP) are supported.",
   file_too_large: "This file is too large. Please upload a smaller resume.",
   corrupted_file: "The file appears to be corrupted or unreadable.",
@@ -37,10 +37,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   version_delete_last: "You cannot delete the only remaining version.",
   version_delete_master: "The master resume version cannot be deleted.",
   pdf_generation_failed: "Could not generate the PDF. Please try again.",
-  connection_error:
-    "Could not connect to the server. Please make sure the service is running and try again.",
-  network_error:
-    "No internet connection detected. Please check your network and try again.",
+  connection_error: "Could not connect. Please check the server and retry.",
+  network_error: "Could not connect. Please check the server and retry.",
   parse_error: "Received an invalid response from the server. Please try again.",
   http_error: "Something went wrong. Please try again.",
   internal_error: "Something went wrong. Please try again.",

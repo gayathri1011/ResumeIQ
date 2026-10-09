@@ -49,13 +49,14 @@ class RateLimitExceededError(AppError):
 
 
 def build_error_response(
+    request: Request | None = None,
     *,
     code: str,
     message: str,
     status_code: int,
     details: Any | None = None,
 ) -> JSONResponse:
-    return JSONResponse(
+    response = JSONResponse(
         status_code=status_code,
         content={
             "error": {
@@ -65,6 +66,13 @@ def build_error_response(
             }
         },
     )
+    origin = request.headers.get("origin") if request else None
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 
 def _validation_message(errors: list[dict[str, Any]]) -> str:
@@ -80,8 +88,9 @@ def _validation_message(errors: list[dict[str, Any]]) -> str:
 
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
-    async def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
+    async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
         response = build_error_response(
+            request,
             code=exc.code,
             message=exc.message,
             status_code=exc.status_code,
@@ -93,11 +102,12 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def validation_error_handler(
-        _: Request,
+        request: Request,
         exc: RequestValidationError,
     ) -> JSONResponse:
         errors = list(exc.errors())
         return build_error_response(
+            request,
             code="validation_error",
             message=_validation_message(errors),
             status_code=422,
@@ -105,8 +115,9 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(DuplicateKeyError)
-    async def integrity_error_handler(_: Request, exc: DuplicateKeyError) -> JSONResponse:
+    async def integrity_error_handler(request: Request, exc: DuplicateKeyError) -> JSONResponse:
         return build_error_response(
+            request,
             code="database_conflict",
             message="A conflicting update occurred. Please refresh and try again.",
             status_code=409,
@@ -116,8 +127,9 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(ConnectionFailure)
     @app.exception_handler(ServerSelectionTimeoutError)
     @app.exception_handler(OperationFailure)
-    async def operational_error_handler(_: Request, exc: Exception) -> JSONResponse:
+    async def operational_error_handler(request: Request, exc: Exception) -> JSONResponse:
         return build_error_response(
+            request,
             code="database_unavailable",
             message="The service is temporarily unavailable. Please try again shortly.",
             status_code=503,
@@ -125,8 +137,9 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(PyMongoError)
-    async def database_error_handler(_: Request, exc: PyMongoError) -> JSONResponse:
+    async def database_error_handler(request: Request, exc: PyMongoError) -> JSONResponse:
         return build_error_response(
+            request,
             code="database_error",
             message="A database error occurred. Please try again.",
             status_code=500,
@@ -134,9 +147,10 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(Exception)
-    async def unhandled_error_handler(_: Request, exc: Exception) -> JSONResponse:
+    async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
         logger.exception("Unhandled server exception: %s", exc)
         return build_error_response(
+            request,
             code="internal_error",
             message="An unexpected error occurred.",
             status_code=500,

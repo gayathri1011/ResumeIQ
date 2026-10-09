@@ -131,10 +131,10 @@ export function InterviewSetup() {
         target_role: targetRole.trim(),
         difficulty,
         interview_type: interviewType,
-        estimated_question_count: questionCount,
+        estimated_question_count: Number(questionCount) || 5,
         focus_skills: focusSkills,
         focus_areas: focusSkills,
-        resume_id: selectedResumeId || undefined,
+        resume_id: selectedResumeId ? selectedResumeId : undefined,
         job_description_id: mode === "matched_job" && jobId ? jobId : undefined,
         job_description_text: mode === "job_desc" && jobDescriptionText ? jobDescriptionText : undefined,
       };
@@ -167,8 +167,18 @@ export function InterviewSetup() {
       </div>
 
       {errorMessage && (
-        <Alert variant="error">
-          {errorMessage}
+        <Alert variant="error" className="flex items-center justify-between">
+          <span>{errorMessage}</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleStart}
+            disabled={isSubmitting}
+            className="ml-3 shrink-0 h-8"
+          >
+            Retry
+          </Button>
         </Alert>
       )}
 

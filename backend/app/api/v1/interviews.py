@@ -73,10 +73,12 @@ async def list_interview_sessions(
     current_user: CurrentUserDep,
     session: AsyncSessionDep,
     pagination: tuple[int, int] = Depends(pagination_params),
+    skip: int | None = None,
 ) -> list[InterviewSessionListItem]:
     limit, offset = pagination
+    effective_skip = skip if skip is not None else offset
     service = InterviewService(session)
-    return await service.list_sessions(current_user.id, skip=offset, limit=limit)
+    return await service.list_sessions(current_user.id, skip=effective_skip, limit=limit)
 
 
 @router.get(

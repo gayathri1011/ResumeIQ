@@ -65,21 +65,25 @@ function redirectToLogin(): void {
 
 
 function toApiClientError(
-
   status: number,
-
   code: string,
-
   message: string,
-
   details?: string | null,
-
 ): ApiClientError {
-
-  const friendly = getUserFriendlyErrorMessage({ code, message, details });
+  let friendly: string;
+  if (status === 0) {
+    friendly = "Could not connect. Please check the server and retry.";
+  } else if (status === 401) {
+    friendly = "Please log in again.";
+  } else if (status === 422) {
+    friendly = "Please check your details and try again.";
+  } else if (status >= 500) {
+    friendly = "Something went wrong. Please try again.";
+  } else {
+    friendly = getUserFriendlyErrorMessage({ code, message, details });
+  }
 
   return new ApiClientError(friendly, status, code, details);
-
 }
 
 
@@ -186,13 +190,10 @@ export async function apiRequest<T>(
     });
 
   } catch {
-    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
     throw toApiClientError(
       0,
-      isOffline ? "network_error" : "connection_error",
-      isOffline
-        ? "No internet connection detected. Please check your network and try again."
-        : "Could not connect to the server. Please make sure the service is running and try again.",
+      "connection_error",
+      "Could not connect. Please check the server and retry.",
     );
   }
 
