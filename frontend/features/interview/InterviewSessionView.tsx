@@ -5,12 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   AlertCircle,
-  BotMessageSquare,
   Loader2,
   Mic,
   Send,
+  Square,
   StopCircle,
-  Zap,
 } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
@@ -68,7 +67,8 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
 
   const answerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
-  const textBeforeSpeechRef = useRef<string>("");
+  const shouldListenRef = useRef(false);
+  const baseTextRef = useRef<string>("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -79,6 +79,7 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
     }
 
     return () => {
+      shouldListenRef.current = false;
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
@@ -113,19 +114,19 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
       ? (session.turns[session.current_turn_index] ?? null)
       : null;
 
-  const toggleListening = () => {
-    if (isListening) {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {
-          // ignore
-        }
+  const stopListening = () => {
+    shouldListenRef.current = false;
+    setIsListening(false);
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore
       }
-      setIsListening(false);
-      return;
     }
+  };
 
+  const startListening = () => {
     if (typeof window === "undefined") return;
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -135,14 +136,24 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
       return;
     }
 
+    setSpeechError(null);
+    baseTextRef.current = currentAnswer;
+    shouldListenRef.current = true;
+
     try {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // ignore
+        }
+      }
+
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang =
         typeof navigator !== "undefined" && navigator.language ? navigator.language : "en-US";
-
-      textBeforeSpeechRef.current = currentAnswer;
 
       recognition.onstart = () => {
         setIsListening(true);
@@ -150,33 +161,72 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
       };
 
       recognition.onresult = (event: any) => {
-        let transcript = "";
+        let finalTranscript = "";
+        let interimTranscript = "";
+
         for (let i = 0; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
+          const item = event.results[i];
+          if (item.isFinal) {
+            finalTranscript += item[0].transcript;
+          } else {
+            interimTranscript += item[0].transcript;
+          }
         }
-        const base = textBeforeSpeechRef.current;
-        const separator = base && !base.endsWith(" ") && !base.endsWith("\n") ? " " : "";
-        setCurrentAnswer(base + separator + transcript);
+
+        const base = baseTextRef.current.trim();
+        const finalClean = finalTranscript.trim();
+        const interimClean = interimTranscript.trim();
+
+        const parts = [base, finalClean, interimClean].filter(Boolean);
+        setCurrentAnswer(parts.join(" "));
       };
 
       recognition.onerror = (event: any) => {
         if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-          setSpeechError("Microphone permission was denied.");
-        } else if (event.error !== "no-speech") {
-          setSpeechError("Voice input stopped.");
+          shouldListenRef.current = false;
+          setIsListening(false);
+          setSpeechError("Microphone access is blocked. Allow it in your browser settings.");
+        } else if (event.error === "no-speech") {
+          // Quietly ignore; onend will restart if continuous mode stopped
+        } else {
+          // Other errors: stop quietly
+          shouldListenRef.current = false;
+          setIsListening(false);
         }
-        setIsListening(false);
       };
 
       recognition.onend = () => {
-        setIsListening(false);
+        if (shouldListenRef.current) {
+          setCurrentAnswer((prev) => {
+            baseTextRef.current = prev;
+            return prev;
+          });
+          try {
+            recognition.start();
+            return;
+          } catch {
+            shouldListenRef.current = false;
+            setIsListening(false);
+          }
+        } else {
+          setIsListening(false);
+        }
       };
 
       recognitionRef.current = recognition;
       recognition.start();
     } catch {
-      setSpeechError("Could not start microphone.");
+      shouldListenRef.current = false;
       setIsListening(false);
+      setSpeechError("Could not start microphone.");
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
     }
   };
 
@@ -184,14 +234,7 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
     if (e) e.preventDefault();
     if (!session || !activeTurn || isSubmittingAnswer) return;
 
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {
-        // ignore
-      }
-    }
-    setIsListening(false);
+    stopListening();
 
     const trimmed = currentAnswer.trim();
     if (!trimmed) {
@@ -210,6 +253,7 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
       );
 
       setCurrentAnswer("");
+      baseTextRef.current = "";
 
       if (evaluation.is_complete) {
         router.push(`/interview/${sessionId}/report`);
@@ -227,14 +271,7 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
   };
 
   const handleEndEarly = async () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {
-        // ignore
-      }
-    }
-    setIsListening(false);
+    stopListening();
 
     setIsEndingSession(true);
     setShowEndDialog(false);
@@ -414,91 +451,96 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
               )}
 
               <div className="space-y-1.5">
-                <textarea
-                  ref={answerTextareaRef}
-                  value={currentAnswer}
-                  onChange={(e) => setCurrentAnswer(e.target.value)}
-                  disabled={isSubmittingAnswer}
-                  rows={6}
-                  placeholder="Type your answer here, or click the mic to speak..."
-                  className="w-full rounded-md border border-input bg-background/90 px-3.5 py-3 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 resize-y"
-                  onKeyDown={(e) => {
-                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-                      e.preventDefault();
-                      void handleSubmitAnswer();
-                    }
-                  }}
-                />
-                {speechError && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 px-1">{speechError}</p>
-                )}
-                <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                  <span>
-                    Press <kbd className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono border">Ctrl+Enter</kbd> to submit
-                  </span>
-                  <span>{currentAnswer.length} characters</span>
+                <div className="relative rounded-md border border-input bg-background/90 shadow-sm transition-colors focus-within:ring-2 focus-within:ring-primary/40 focus-within:border-primary/50">
+                  <textarea
+                    ref={answerTextareaRef}
+                    value={currentAnswer}
+                    onChange={(e) => {
+                      setCurrentAnswer(e.target.value);
+                      baseTextRef.current = e.target.value;
+                    }}
+                    disabled={isSubmittingAnswer}
+                    rows={6}
+                    placeholder="Type your answer here, or click the mic to speak..."
+                    className="w-full bg-transparent px-3.5 pt-3 pb-12 text-sm focus:outline-none disabled:opacity-50 resize-y rounded-md border-0"
+                    onKeyDown={(e) => {
+                      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                        e.preventDefault();
+                        void handleSubmitAnswer();
+                      }
+                    }}
+                  />
+
+                  {/* Inside bottom controls: Listening status on left, mic button on right */}
+                  <div className="pointer-events-none absolute bottom-2.5 left-3 right-3 flex items-center justify-between">
+                    <div className="pointer-events-auto">
+                      {isListening && (
+                        <span className="flex items-center gap-1.5 text-xs text-primary font-medium animate-pulse">
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping" />
+                          Listening...
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="pointer-events-auto">
+                      {speechSupported ? (
+                        <button
+                          type="button"
+                          onClick={toggleListening}
+                          disabled={isSubmittingAnswer}
+                          aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                          title={isListening ? "Stop voice input" : "Start voice input"}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 ${
+                            isListening
+                              ? "bg-primary text-primary-foreground shadow-sm ring-4 ring-primary/20 animate-pulse"
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted/80 bg-background border border-border/60 shadow-xs"
+                          }`}
+                        >
+                          {isListening ? (
+                            <Square className="h-3.5 w-3.5 fill-current" />
+                          ) : (
+                            <Mic className="h-4 w-4" />
+                          )}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled
+                          aria-label="Voice input not supported"
+                          title="Voice input works in Chrome and Edge"
+                          className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/40 cursor-not-allowed bg-muted/40 border border-border/30"
+                        >
+                          <Mic className="h-4 w-4 opacity-40" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
+
+                {speechError && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 px-1 pt-1">{speechError}</p>
+                )}
               </div>
             </CardContent>
 
-            <CardFooter className="flex items-center justify-between border-t border-border/40 pt-4 pb-4">
-              <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Zap className="h-3.5 w-3.5 text-amber-500" />
-                <span>Answers adjust follow-up questions in real time</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {isListening && (
-                  <span className="flex items-center gap-1.5 text-xs text-primary font-medium animate-pulse mr-1">
-                    <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
-                    Listening...
-                  </span>
-                )}
-                {speechSupported ? (
-                  <Button
-                    type="button"
-                    variant={isListening ? "default" : "outline"}
-                    size="sm"
-                    onClick={toggleListening}
-                    disabled={isSubmittingAnswer}
-                    aria-label={isListening ? "Stop voice input" : "Start voice input"}
-                    title={isListening ? "Click to stop listening" : "Click to speak your answer"}
-                    className={`h-9 px-3 gap-1.5 transition-all ${
-                      isListening
-                        ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Mic className="h-4 w-4" />
-                    <span className="text-xs">{isListening ? "Stop" : "Mic"}</span>
-                  </Button>
+            <CardFooter className="flex items-center justify-end border-t border-border/40 pt-4 pb-4">
+              <Button
+                type="submit"
+                disabled={isSubmittingAnswer || !currentAnswer.trim()}
+                className="gap-2 shadow-sm font-medium"
+              >
+                {isSubmittingAnswer ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving your answer...
+                  </>
                 ) : (
-                  <span
-                    className="text-xs text-muted-foreground p-2"
-                    title="Voice input works in Chrome and Edge"
-                  >
-                    <Mic className="h-4 w-4 opacity-40" />
-                  </span>
+                  <>
+                    <span>Submit Answer</span>
+                    <Send className="h-4 w-4" />
+                  </>
                 )}
-
-                <Button
-                  type="submit"
-                  disabled={isSubmittingAnswer || !currentAnswer.trim()}
-                  className="gap-2 shadow-sm font-medium"
-                >
-                  {isSubmittingAnswer ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Saving your answer...
-                    </>
-                  ) : (
-                    <>
-                      <span>Submit Answer</span>
-                      <Send className="h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-              </div>
+              </Button>
             </CardFooter>
           </form>
         </Card>

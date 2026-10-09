@@ -7,7 +7,6 @@ import {
   ArrowRight,
   BotMessageSquare,
   Briefcase,
-  CheckCircle2,
   FileText,
   History,
   Layers,
@@ -119,25 +118,11 @@ export function InterviewSetup() {
     if (e) {
       e.preventDefault();
     }
+    if (!isReadyToStart || isSubmitting) {
+      return;
+    }
+
     setErrorMessage(null);
-
-    if (!targetRole.trim()) {
-      setErrorMessage("Please enter a target role or job title.");
-      return;
-    }
-    if (!difficulty) {
-      setErrorMessage("Please select an experience level.");
-      return;
-    }
-    if (!interviewType) {
-      setErrorMessage("Please select a question style.");
-      return;
-    }
-    if (!questionCount) {
-      setErrorMessage("Please select the number of questions.");
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -257,7 +242,7 @@ export function InterviewSetup() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="targetRole">Target Role *</Label>
+              <Label htmlFor="targetRole">Target Role</Label>
               <Input
                 id="targetRole"
                 value={targetRole}
@@ -270,9 +255,6 @@ export function InterviewSetup() {
                 placeholder="e.g. Junior GenAI Engineer, Staff SRE, Product Engineer"
                 required
               />
-              {!targetRole.trim() && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">Please enter a role or job title.</p>
-              )}
             </div>
 
             {mode === "job_desc" && (
@@ -342,12 +324,7 @@ export function InterviewSetup() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Experience level *</Label>
-                {!difficulty && (
-                  <span className="text-xs text-amber-600 dark:text-amber-400">Please choose a level</span>
-                )}
-              </div>
+              <Label>Experience level</Label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {DIFFICULTY_OPTIONS.map((opt) => (
                   <button
@@ -368,12 +345,7 @@ export function InterviewSetup() {
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Question style *</Label>
-                {!interviewType && (
-                  <span className="text-xs text-amber-600 dark:text-amber-400">Please choose a style</span>
-                )}
-              </div>
+              <Label>Question style</Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {TYPE_OPTIONS.map((opt) => (
                   <button
@@ -395,12 +367,10 @@ export function InterviewSetup() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="questionCount">Number of questions *</Label>
+                <Label htmlFor="questionCount">Number of questions</Label>
                 {questionCount ? (
                   <span className="text-sm font-semibold text-primary">{questionCount} Questions</span>
-                ) : (
-                  <span className="text-xs text-amber-600 dark:text-amber-400">Required</span>
-                )}
+                ) : null}
               </div>
               <select
                 id="questionCount"
@@ -415,15 +385,6 @@ export function InterviewSetup() {
                   </option>
                 ))}
               </select>
-              {!questionCount ? (
-                <p className="text-xs text-amber-600 dark:text-amber-400">
-                  Please select between 1 and 10 questions to practice.
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  The interview will adapt to your answers across these {questionCount} questions.
-                </p>
-              )}
             </div>
 
             <div className="space-y-3">
@@ -463,11 +424,7 @@ export function InterviewSetup() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            <span>Questions adjust as you answer.</span>
-          </div>
+        <div className="flex justify-end pt-2">
           <Button
             type="button"
             size="lg"
