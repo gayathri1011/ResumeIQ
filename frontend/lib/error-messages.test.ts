@@ -39,6 +39,7 @@ describe("isRetryableErrorCode", () => {
   it("flags transient failures as retryable", () => {
     expect(isRetryableErrorCode("ai_provider_error")).toBe(true);
     expect(isRetryableErrorCode("network_error")).toBe(true);
+    expect(isRetryableErrorCode("connection_error")).toBe(true);
     expect(isRetryableErrorCode("invalid_credentials")).toBe(false);
   });
 });

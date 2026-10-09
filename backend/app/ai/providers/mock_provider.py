@@ -344,7 +344,385 @@ def _build_valid_resume_optimize_output(messages: list[dict[str, str]] | None = 
     return {"optimized_content": optimized, "changes": changes}
 
 
+def _is_interview_plan_prompt(messages: list[dict[str, str]] | None) -> bool:
+    if not messages:
+        return False
+    combined = " ".join(message.get("content", "") for message in messages).lower()
+    return "interview plan" in combined or "adaptive ai interview architect" in combined
+
+
+def _build_valid_interview_plan_output(messages: list[dict[str, str]] | None = None) -> dict[str, object]:
+    user_text = messages[-1].get("content", "") if messages else ""
+    role = "Backend Engineer"
+    difficulty = "mid"
+    if "TARGET ROLE:" in user_text:
+        try:
+            line = [ln for ln in user_text.splitlines() if "TARGET ROLE:" in ln][0]
+            extracted = line.split("TARGET ROLE:", 1)[1].strip()
+            if extracted:
+                role = extracted
+        except Exception:
+            pass
+    if "DIFFICULTY:" in user_text:
+        try:
+            line = [ln for ln in user_text.splitlines() if "DIFFICULTY:" in ln][0]
+            extracted = line.split("DIFFICULTY:", 1)[1].strip()
+            if extracted:
+                difficulty = extracted
+        except Exception:
+            pass
+
+    is_genai = "genai" in role.lower() or "ai" in role.lower() or "llm" in role.lower()
+    is_frontend = "frontend" in role.lower() or "react" in role.lower()
+
+    if is_genai:
+        domains = ["LLM Architecture", "RAG Systems", "Evaluation & Safety"]
+        focus_skills = ["Prompt Engineering", "Vector DBs", "LangChain/LlamaIndex"]
+        initial_q = f"How would you evaluate and optimize a RAG pipeline for the {role} position?"
+        initial_tag = "RAG Pipelines"
+    elif is_frontend:
+        domains = ["UI Engineering", "State Management", "Performance"]
+        focus_skills = ["React", "TypeScript", "Core Web Vitals"]
+        initial_q = f"How do you profile and optimize client-side rendering performance for {role}?"
+        initial_tag = "React Performance"
+    else:
+        domains = ["Backend Systems", "API Design", "Databases"]
+        focus_skills = ["Python", "SQL", "System Design"]
+        initial_q = f"Can you explain how you design a resilient REST API endpoint handling database transactions for a {role}?"
+        initial_tag = "API Design"
+
+    return {
+        "target_role": role,
+        "difficulty": difficulty,
+        "estimated_duration_minutes": 30,
+        "domains": domains,
+        "focus_skills": focus_skills,
+        "initial_question": initial_q,
+        "initial_skill_tag": initial_tag,
+        "initial_expected_criteria": [
+            "Clear technical rationale and trade-offs",
+            "Production failure mode mitigation",
+        ],
+        "rubric": [
+            {"criterion": "Technical Precision", "description": "Accuracy and depth", "weight": 40},
+            {"criterion": "Problem Solving", "description": "Trade-offs and edge cases", "weight": 35},
+            {"criterion": "Communication", "description": "Clarity and conciseness", "weight": 25},
+        ],
+        "question_plan": [
+            {
+                "topic": domains[0],
+                "skill_tag": focus_skills[0],
+                "target_competency": "Domain fundamentals",
+                "difficulty": difficulty,
+            },
+            {
+                "topic": domains[1] if len(domains) > 1 else domains[0],
+                "skill_tag": focus_skills[1] if len(focus_skills) > 1 else focus_skills[0],
+                "target_competency": "Practical implementation and tradeoffs",
+                "difficulty": difficulty,
+            },
+            {
+                "topic": domains[2] if len(domains) > 2 else domains[0],
+                "skill_tag": focus_skills[2] if len(focus_skills) > 2 else focus_skills[0],
+                "target_competency": "Production architecture and scaling",
+                "difficulty": difficulty,
+            },
+        ],
+    }
+
+
+def _is_interview_turn_eval_prompt(messages: list[dict[str, str]] | None) -> bool:
+    if not messages:
+        return False
+    combined = " ".join(message.get("content", "") for message in messages).lower()
+    return "interview evaluator" in combined or "evaluate this interview turn" in combined
+
+
+def _build_valid_interview_turn_eval_output(messages: list[dict[str, str]] | None = None) -> dict[str, object]:
+    user_text = messages[-1].get("content", "") if messages else ""
+    answer_text = ""
+    if "<candidate_answer>" in user_text and "</candidate_answer>" in user_text:
+        answer_text = user_text.split("<candidate_answer>")[1].split("</candidate_answer>")[0].strip()
+
+    is_weak = any(phrase in answer_text.lower() for phrase in ["not sure", "don't know", "unsure", "i guess", "no idea"]) or (len(answer_text) > 0 and len(answer_text) < 25)
+    is_strong = any(phrase in answer_text.lower() for phrase in ["deep", "architecture", "tradeoff", "trade-off", "idempotent", "distributed", "benchmarked", "sharding", "consistency"]) or len(answer_text) > 200
+
+    if is_weak:
+        score = 4
+        turn_score = 40
+        dim_scores = {
+            "technical_correctness": 4, "relevance": 5, "depth": 3, "clarity": 5,
+            "completeness": 3, "reasoning": 4, "communication": 5, "resume_evidence": 4, "role_relevance": 5
+        }
+        strengths = ["Willingness to acknowledge knowledge boundary."]
+        missing = ["Missing fundamental definition and core conceptual principles."]
+        feedback = "Answer lacked depth on foundational principles; stepping back to clarify core concepts."
+        next_action = "follow_up"
+        next_q = "Could you explain the basic core concepts or fundamental principles behind this approach?"
+        next_tag = "Fundamentals Clarification"
+        rationale = "Candidate demonstrated uncertainty; providing an accessible follow-up to validate fundamentals."
+        claim_status = "weak"
+    elif is_strong:
+        score = 9
+        turn_score = 90
+        dim_scores = {
+            "technical_correctness": 9, "relevance": 9, "depth": 9, "clarity": 9,
+            "completeness": 9, "reasoning": 9, "communication": 9, "resume_evidence": 9, "role_relevance": 9
+        }
+        strengths = ["Comprehensive domain depth, precise trade-off evaluation, and production mindset."]
+        missing = []
+        feedback = "Excellent response demonstrating senior-level technical judgment and clear communication."
+        next_action = "next_topic"
+        next_q = "Given that architecture, how would you design for high availability and failover across multiple regions?"
+        next_tag = "Distributed Architecture"
+        rationale = "Candidate provided an outstanding answer; escalating to deeper scenario and architecture."
+        claim_status = "validated"
+    else:
+        score = 8
+        turn_score = 80
+        dim_scores = {
+            "technical_correctness": 8, "relevance": 8, "depth": 8, "clarity": 8,
+            "completeness": 8, "reasoning": 8, "communication": 8, "resume_evidence": 8, "role_relevance": 8
+        }
+        strengths = ["Solid explanation of core concepts and structured communication."]
+        missing = ["Could provide more quantified production metrics."]
+        feedback = "Good response covering key aspects with clear structure."
+        next_action = "next_topic"
+        next_q = "How do you approach indexing and query optimization when response latency degrades under high load?"
+        next_tag = "SQL Optimization"
+        rationale = "Strong answer; advancing to practical performance tuning."
+        claim_status = "validated"
+
+    return {
+        "score": score,
+        "turn_score": turn_score,
+        "dimension_scores": dim_scores,
+        "criteria_feedback": [
+            {
+                "criterion": "Technical Correctness",
+                "met": not is_weak,
+                "notes": feedback,
+            }
+        ],
+        "strengths": strengths,
+        "areas_for_improvement": missing,
+        "missing_points": missing,
+        "feedback": feedback,
+        "next_question_direction": rationale,
+        "resume_claim_status": claim_status,
+        "skill_tags": [next_tag],
+        "skill_tag_assessments": [
+            {
+                "skill": next_tag,
+                "demonstrated_level": "advanced" if is_strong else ("beginner" if is_weak else "competent"),
+                "confidence": 0.85,
+            }
+        ],
+        "next_action": next_action,
+        "next_question": next_q,
+        "next_skill_tag": next_tag,
+        "interviewer_rationale": rationale,
+    }
+
+
+def _is_interview_report_prompt(messages: list[dict[str, str]] | None) -> bool:
+    if not messages:
+        return False
+    combined = " ".join(message.get("content", "") for message in messages).lower()
+    return "interview evaluation panel" in combined or "final interview report" in combined
+
+
+def _build_valid_interview_report_output(messages: list[dict[str, str]] | None = None) -> dict[str, object]:
+    return {
+        "overall_score": 84,
+        "readiness_level": "interview_ready",
+        "readiness_status": "interview_ready",
+        "summary": "Candidate demonstrated solid domain competencies with clear communication and structured problem solving across interview turns.",
+        "category_scores": {
+            "Technical Knowledge": 85,
+            "Project Understanding": 84,
+            "Problem Solving": 84,
+            "Communication": 82,
+            "Role Alignment": 86,
+            "Behavioral Readiness": 80,
+            "technical_depth": 85,
+            "communication": 82,
+            "problem_solving": 84,
+            "role_alignment": 86,
+        },
+        "demonstrated_strengths": [
+            "Robust mental model of system boundaries and API design",
+            "Clear articulation of data management strategies",
+        ],
+        "strong_areas": [
+            "Robust mental model of system boundaries and API design",
+            "Clear articulation of data management strategies",
+        ],
+        "verified_gaps": [
+            "Limited discussion of distributed tracing and multi-cluster observability",
+        ],
+        "weak_areas": [
+            "Limited discussion of distributed tracing and multi-cluster observability",
+        ],
+        "resume_claims_tested": [
+            {"claim": "Engineered high-performance REST APIs", "status": "validated"},
+            {"claim": "Managed distributed SQL transactions", "status": "validated"},
+        ],
+        "skill_evaluations": [
+            {
+                "skill": "API Design",
+                "score": 88,
+                "evidence_summary": "Articulated idempotency and transaction boundaries effectively.",
+            },
+            {
+                "skill": "SQL Optimization",
+                "score": 80,
+                "evidence_summary": "Explained composite indexes and execution plan profiling.",
+            },
+        ],
+        "key_recommendations": [
+            "Review distributed consensus and caching invalidation strategies for senior-level interviews.",
+        ],
+        "actionable_recommendations": [
+            "Review distributed consensus and caching invalidation strategies for senior-level interviews.",
+        ],
+        "ordered_next_practice_areas": [
+            "Distributed Tracing & Observability",
+            "Multi-region consensus",
+        ],
+    }
+
+
+def _is_career_skill_gap_prompt(messages: list[dict[str, str]] | None) -> bool:
+    if not messages:
+        return False
+    combined = " ".join(message.get("content", "") for message in messages).lower()
+    return "skill gap strategist" in combined or "career skill-gap" in combined
+
+
+def _build_valid_career_skill_gap_output() -> dict[str, object]:
+    return {
+        "target_role": "Backend Engineer",
+        "current_readiness_percentage": 68,
+        "summary": "Strong foundational programming and database knowledge; gaps exist in distributed systems and cloud deployment proof.",
+        "gaps": [
+            {
+                "skill": "Docker",
+                "priority": "high",
+                "gap_type": "missing_capability",
+                "why_it_matters": "Containerization is required for modern microservices delivery.",
+                "expected_competency": "Multi-stage builds and container networking.",
+            },
+            {
+                "skill": "System Design",
+                "priority": "medium",
+                "gap_type": "proof_gap",
+                "why_it_matters": "Needs concrete evidence of scaling services beyond single-node instances.",
+                "expected_competency": "Caching architectures and message queues.",
+            },
+        ],
+        "strengths_to_leverage": [
+            "Extensive Python development background",
+            "Relational database query and schema proficiency",
+        ],
+    }
+
+
+def _is_career_roadmap_prompt(messages: list[dict[str, str]] | None) -> bool:
+    if not messages:
+        return False
+    combined = " ".join(message.get("content", "") for message in messages).lower()
+    return "career roadmap architect" in combined or "phased career growth roadmap" in combined
+
+
+def _build_valid_career_roadmap_output() -> dict[str, object]:
+    return {
+        "target_role": "Backend Engineer",
+        "estimated_duration_weeks": 8,
+        "summary": "An 8-week targeted curriculum focusing on containerization, asynchronous messaging, and production deployments.",
+        "phases": [
+            {
+                "phase_number": 1,
+                "name": "Containerization & Workflows",
+                "duration_weeks": 4,
+                "focus_skills": ["Docker", "CI/CD"],
+                "milestones": [
+                    {
+                        "milestone_id": "m1_1",
+                        "title": "Containerize a multi-tier web application",
+                        "skills_addressed": ["Docker"],
+                        "deliverable": "Working Dockerfile and docker-compose setup with healthchecks",
+                    }
+                ],
+                "learning_objectives": [
+                    "Master multi-stage Docker builds",
+                    "Configure local networking between API and database",
+                ],
+            },
+            {
+                "phase_number": 2,
+                "name": "Distributed Messaging & Scaling",
+                "duration_weeks": 4,
+                "focus_skills": ["System Design", "Redis"],
+                "milestones": [
+                    {
+                        "milestone_id": "m2_1",
+                        "title": "Implement asynchronous background workers",
+                        "skills_addressed": ["System Design", "Redis"],
+                        "deliverable": "Task queue worker service with retry semantics",
+                    }
+                ],
+                "learning_objectives": [
+                    "Design decoupled message architectures",
+                    "Handle idempotency and consumer backpressure",
+                ],
+            },
+        ],
+    }
+
+
+def _is_career_project_recommendations_prompt(messages: list[dict[str, str]] | None) -> bool:
+    if not messages:
+        return False
+    combined = " ".join(message.get("content", "") for message in messages).lower()
+    return "technical project advisor" in combined or "proof-building portfolio projects" in combined
+
+
+def _build_valid_career_project_recommendations_output() -> dict[str, object]:
+    return {
+        "target_role": "Backend Engineer",
+        "summary": "Selected projects establish tangible proof for distributed systems and containerization.",
+        "projects": [
+            {
+                "project_id": "proj_1",
+                "title": "Event-Driven Asynchronous Ingestion Pipeline",
+                "description": "A production-grade ingestion service handling webhooks and dispatching to background workers.",
+                "targeted_skills": ["Docker", "Redis", "FastAPI"],
+                "difficulty": "intermediate",
+                "architecture_overview": "FastAPI API Gateway -> Redis Streams -> Python Worker Pool -> PostgreSQL",
+                "key_deliverables": [
+                    "Repository with docker-compose and load testing script",
+                    "Documented architecture diagram and benchmark results",
+                ],
+                "resume_bullet_preview": "Engineered asynchronous ingestion pipeline using FastAPI, Redis Streams, and Docker, processing 1,500 events/sec with zero message drop.",
+            }
+        ],
+    }
+
+
 def _resolve_mock_output(messages: list[dict[str, str]] | None) -> dict[str, object]:
+    if _is_interview_plan_prompt(messages):
+        return _build_valid_interview_plan_output(messages)
+    if _is_interview_turn_eval_prompt(messages):
+        return _build_valid_interview_turn_eval_output(messages)
+    if _is_interview_report_prompt(messages):
+        return _build_valid_interview_report_output(messages)
+    if _is_career_skill_gap_prompt(messages):
+        return _build_valid_career_skill_gap_output()
+    if _is_career_roadmap_prompt(messages):
+        return _build_valid_career_roadmap_output()
+    if _is_career_project_recommendations_prompt(messages):
+        return _build_valid_career_project_recommendations_output()
     if _is_resume_optimize_prompt(messages):
         return _build_valid_resume_optimize_output(messages)
     if _is_skill_gap_prompt(messages):
@@ -358,6 +736,7 @@ def _resolve_mock_output(messages: list[dict[str, str]] | None) -> dict[str, obj
     if _is_job_extraction_prompt(messages):
         return _build_valid_job_output(messages)
     return _build_valid_output(messages)
+
 
 
 class MockAIProvider:

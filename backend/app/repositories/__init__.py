@@ -4,6 +4,8 @@ from app.repositories.analysis_repo import (
     ResumeAnalysisRepository,
 )
 from app.repositories.base import BaseRepository
+from app.repositories.growth_repository import CareerGrowthPlanRepository
+from app.repositories.interview_repository import InterviewSessionRepository
 from app.repositories.job_repo import JobDescriptionRepository, JobMatchRepository
 from app.repositories.resume_repo import ResumeRepository, ResumeVersionRepository
 from app.repositories.skill_repo import (
@@ -16,6 +18,8 @@ from app.repositories.user_repo import UserRepository
 __all__ = [
     "AIAnalysisResultRepository",
     "BaseRepository",
+    "CareerGrowthPlanRepository",
+    "InterviewSessionRepository",
     "JobDescriptionRepository",
     "JobMatchRepository",
     "JobRequiredSkillRepository",
@@ -27,3 +31,4 @@ __all__ = [
     "SkillRepository",
     "UserRepository",
 ]
+

@@ -24,7 +24,6 @@ import { DashboardError } from "@/features/dashboard/DashboardError";
 import { DashboardSkeleton } from "@/features/dashboard/DashboardSkeleton";
 import { QuickActions } from "@/features/dashboard/QuickActions";
 import { ScoreCountUp } from "@/features/dashboard/ScoreCountUp";
-import { TargetRoleField } from "@/features/dashboard/TargetRoleField";
 import { useDashboard } from "@/features/dashboard/useDashboard";
 import { getGreeting } from "@/features/dashboard/utils";
 import { WhyThisScoreDialog } from "@/features/dashboard/WhyThisScoreDialog";
@@ -105,7 +104,7 @@ export function Dashboard() {
       >
         <PageHeader
           title={`${getGreeting()}${user?.full_name ? `, ${user.full_name}` : ""}`}
-          description="Resume health overview and actionable insights"
+          description="See your resume health score and next steps."
         />
 
         {needsAnalysis ? (
@@ -118,8 +117,8 @@ export function Dashboard() {
               </CardTitle>
               <CardDescription>
                 {status === "no_analysis"
-                  ? `${displayName} is uploaded. Run analysis to unlock health scores and insights.`
-                  : "Resume content changed after the last analysis. Refresh to keep scores accurate."}
+                  ? `${displayName} is ready. Run analysis to see your score.`
+                  : "Your resume changed. Refresh to update your score."}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
@@ -141,12 +140,12 @@ export function Dashboard() {
           </Card>
         ) : null}
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card className="flex flex-col justify-between">
             <CardHeader>
               <CardTitle>Resume health</CardTitle>
               <CardDescription>
-                Overall score from your latest AI analysis
+                Overall score from your latest analysis.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
@@ -187,43 +186,43 @@ export function Dashboard() {
             </CardContent>
           </Card>
 
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent resume</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div>
-                  <p className="font-medium">{displayName}</p>
+          <Card className="flex flex-col justify-between">
+            <CardHeader>
+              <CardTitle>Recent resume</CardTitle>
+              <CardDescription>
+                Active resume and latest score.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Active resume</p>
+                <p className="font-medium text-base truncate">{displayName}</p>
+              </div>
+              {resumes.length > 1 ? (
+                <div className="space-y-2">
+                  <Label htmlFor="resume-select">Switch resume</Label>
+                  <select
+                    id="resume-select"
+                    className={formControlClass}
+                    value={selectedResumeId}
+                    onChange={(event) => selectResume(event.target.value)}
+                  >
+                    {resumes.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.original_filename ?? item.title}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                {resumes.length > 1 ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="resume-select">Switch resume</Label>
-                    <select
-                      id="resume-select"
-                      className={formControlClass}
-                      value={selectedResumeId}
-                      onChange={(event) => selectResume(event.target.value)}
-                    >
-                      {resumes.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.original_filename ?? item.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : null}
-                <div className="border-t border-border/60 pt-3">
-                  <p className="text-xs text-muted-foreground">Latest score</p>
-                  <p className="font-medium tabular-nums">
-                    {overallScore !== null ? `${overallScore} / 100` : "—"}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <TargetRoleField resumeId={resume.id} />
-          </div>
+              ) : null}
+              <div className="border-t border-border/60 pt-3">
+                <p className="text-xs text-muted-foreground">Latest score</p>
+                <p className="font-medium tabular-nums">
+                  {overallScore !== null ? `${overallScore} / 100` : "—"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {analysis ? (

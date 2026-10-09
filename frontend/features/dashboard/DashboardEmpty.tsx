@@ -21,8 +21,7 @@ export function DashboardEmpty() {
           </div>
           <CardTitle>No resumes yet</CardTitle>
           <CardDescription>
-            Upload a resume to parse its structure and run AI analysis. Your
-            dashboard will show health scores and actionable feedback.
+            Upload your resume to see your health score and get helpful feedback.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center">

@@ -153,7 +153,7 @@ export function ResumeUploader() {
       <div className="mx-auto w-full max-w-2xl space-y-6">
         <PageHeader
           title="Upload resume"
-          description="Upload a PDF, DOCX, or image resume (PNG, JPG, WEBP). We'll extract its structure, then you can run AI analysis from the dashboard."
+          description="Upload your resume to see your score and get started."
           backHref="/dashboard"
         />
       <Card>

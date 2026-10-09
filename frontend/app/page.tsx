@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { ArrowRight, Compass, Eye, FileSearch, Target } from "lucide-react";
+import {
+  ArrowRight,
+  Compass,
+  Eye,
+  FileSearch,
+  MessagesSquare,
+  Target,
+  TrendingUp,
+} from "lucide-react";
 
 import {
   BrandLockup,
@@ -17,26 +25,32 @@ import {
 const FEATURES = [
   {
     title: "Resume health scoring",
-    description:
-      "AI analysis across ATS, skills, experience, and content quality.",
+    description: "Check how well your resume scores for ATS, skills, and clarity.",
     icon: FileSearch,
   },
   {
     title: "Job matching",
-    description:
-      "Compare your resume to a job description with skills, experience, and keyword analysis.",
+    description: "See how closely your resume matches any job description.",
     icon: Target,
   },
   {
+    title: "AI mock interview",
+    description: "Practice realistic interview questions and get helpful feedback.",
+    icon: MessagesSquare,
+  },
+  {
+    title: "Career growth plan",
+    description: "Pick a goal role, find skills to improve, and follow your plan.",
+    icon: TrendingUp,
+  },
+  {
     title: "Career trajectory",
-    description:
-      "Discover realistic career paths based on your experience, skills, and resume evidence.",
+    description: "Explore realistic career paths based on your experience.",
     icon: Compass,
   },
   {
     title: "Recruiter 10-second lens",
-    description:
-      "See what recruiters are likely to notice first — and what your resume may leave hidden.",
+    description: "See what recruiters notice first on your resume.",
     icon: Eye,
   },
 ] as const;
@@ -79,9 +93,7 @@ export default function HomePage() {
             </p>
             <OrnamentDivider />
             <p className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Upload your resume, understand its strengths, match it with real
-              job opportunities, discover your career trajectory, and see how
-              recruiters may perceive you — all in one focused workspace.
+              Get instant feedback on your resume, match jobs, and practice interviews in one place.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3 fade-up fade-up-delay-1">
@@ -97,13 +109,13 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="grid gap-4 pb-10 sm:grid-cols-2">
+        <section className="grid auto-rows-fr gap-4 pb-10 sm:grid-cols-2">
           {FEATURES.map((feature, index) => {
             const Icon = feature.icon;
             return (
               <Card
                 key={feature.title}
-                className={`fade-up fade-up-delay-${index + 1}`}
+                className={`h-full fade-up fade-up-delay-${index + 1}`}
               >
                 <CardHeader>
                   <div className="icon-orb mb-3 h-11 w-11">

@@ -1,5 +1,5 @@
-# AI Prompts
+# AI prompts
 
-Versionable prompt templates (YAML/Jinja2), kept separate from Python logic.
+Versioned prompt data is stored in YAML files and loaded with PyYAML by `loader.py`. Task modules format each `user_template` with Python string formatting, then validate model responses against Pydantic schemas.
 
-Example: `resume_analyze_v1.yaml`, `job_match_v1.yaml`, `optimize_v1.yaml`
+Current prompt files cover resume analysis, job analysis/matching, skill gaps, optimization, role transformation, career trajectory, and recruiter lens. Prompt presence does not by itself imply that a corresponding frontend workflow is currently exposed; see the root `PROJECT_OVERVIEW.md`.

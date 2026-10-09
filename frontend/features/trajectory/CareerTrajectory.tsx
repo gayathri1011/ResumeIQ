@@ -52,11 +52,10 @@ function PathDetails({ path }: { path: TrajectoryPath }) {
     <div className="space-y-5 border-t border-border/60 pt-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <TagGroup title="Skills already shown" items={path.matched_skills} variant="success" />
-        <TagGroup title="Skill gaps" items={path.skill_gaps} variant="outline" />
+        <TagGroup title="Skills to improve" items={path.skill_gaps} variant="outline" />
       </div>
-      <TagGroup title="Proof gaps" items={path.proof_gaps} variant="outline" />
       <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Readiness breakdown</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Score breakdown</p>
         <div className="grid gap-3 sm:grid-cols-2">
           {path.factors.map((factor) => (
             <div key={factor.key} className="space-y-1.5">
@@ -109,7 +108,7 @@ export function CareerTrajectory({ resumeId, versionId, available }: CareerTraje
       <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <CardTitle className="flex items-center gap-2"><span className="icon-orb h-9 w-9"><Compass className="h-4 w-4" /></span>Career trajectory</CardTitle>
-          <CardDescription className="mt-2">Discover where your career can go next, based on the evidence in this resume.</CardDescription>
+          <CardDescription className="mt-2">Discover where your career can go next based on your resume.</CardDescription>
         </div>
         <Button variant="outline" onClick={() => void runAnalysis()} disabled={!available || loading}>
           {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Target className="mr-2 h-4 w-4" />}
@@ -117,7 +116,7 @@ export function CareerTrajectory({ resumeId, versionId, available }: CareerTraje
         </Button>
       </CardHeader>
       <CardContent className="space-y-5">
-        {!available ? <Alert variant="info">Run resume analysis first to ground career paths in your latest resume evidence.</Alert> : null}
+        {!available ? <Alert variant="info">Analyze your resume first to view matching career paths.</Alert> : null}
         {errorMessage ? <Alert variant="error">{errorMessage}</Alert> : null}
         {result ? (
           <>
@@ -149,7 +148,7 @@ export function CareerTrajectory({ resumeId, versionId, available }: CareerTraje
         ) : (
           <div className="flex items-center gap-3 rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground">
             <Compass className="h-5 w-5 shrink-0 text-primary" />
-            Your existing resume is enough. ResumeIQ will identify adjacent roles, explain readiness, and separate capability gaps from proof gaps.
+            Click map my trajectory to explore next career steps and skills to improve.
           </div>
         )}
       </CardContent>

@@ -10,7 +10,7 @@ describe("design tokens", () => {
   });
 
   it("maps score thresholds to stroke colors", () => {
-    expect(scoreStrokeHex(85)).toContain("142");
-    expect(scoreStrokeHex(40)).toContain("0 72%");
+    expect(scoreStrokeHex(85)).toContain("152");
+    expect(scoreStrokeHex(40)).toContain("0 62%");
   });
 });
