@@ -36,6 +36,7 @@ import {
   getInterviewSession,
   submitTurnAnswer,
 } from "@/services/interview.service";
+import { useSpeechToText } from "./useSpeechToText";
 import type {
   InterviewSession,
   InterviewTurn,
@@ -60,41 +61,8 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
   const [isEndingSession, setIsEndingSession] = useState(false);
   const [showEndDialog, setShowEndDialog] = useState(false);
 
-  // Web Speech API state
-  const [isListening, setIsListening] = useState(false);
-  const [speechSupported, setSpeechSupported] = useState(false);
-  const [speechError, setSpeechError] = useState<string | null>(null);
-
   const answerTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<any>(null);
-  const wantListeningRef = useRef(false);
-  const valueRef = useRef("");
-  const baseRef = useRef("");
-  const finalRef = useRef("");
-
-  useEffect(() => {
-    valueRef.current = currentAnswer;
-  }, [currentAnswer]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const hasSpeech = Boolean(
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition,
-      );
-      setSpeechSupported(hasSpeech);
-    }
-
-    return () => {
-      wantListeningRef.current = false;
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch {
-          // ignore
-        }
-      }
-    };
-  }, []);
+  const speech = useSpeechToText(currentAnswer, setCurrentAnswer);
 
   const fetchSession = async () => {
     try {
@@ -120,136 +88,11 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
       ? (session.turns[session.current_turn_index] ?? null)
       : null;
 
-  const stopListening = () => {
-    wantListeningRef.current = false;
-    setIsListening(false);
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {
-        // ignore
-      }
-    }
-  };
-
-  const startListening = () => {
-    if (typeof window === "undefined") return;
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      setSpeechError("Voice input works in Chrome and Edge.");
-      return;
-    }
-
-    setSpeechError(null);
-    baseRef.current = valueRef.current;
-    finalRef.current = "";
-    wantListeningRef.current = true;
-
-    try {
-      if (!recognitionRef.current) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang =
-          typeof navigator !== "undefined" && navigator.language ? navigator.language : "en-US";
-
-        recognition.onstart = () => {
-          setIsListening(true);
-          setSpeechError(null);
-        };
-
-        recognition.onresult = (e: any) => {
-          let interim = "";
-          for (let i = e.resultIndex; i < e.results.length; i++) {
-            const r = e.results[i];
-            if (r && r[0] && r.isFinal) {
-              finalRef.current += r[0].transcript + " ";
-            } else if (r && r[0]) {
-              interim += r[0].transcript;
-            }
-          }
-          const base = baseRef.current;
-          const sep = base && !/\s$/.test(base) ? " " : "";
-          const nextAnswer = (base + sep + finalRef.current + interim).trimStart();
-          setCurrentAnswer(nextAnswer);
-          valueRef.current = nextAnswer;
-        };
-
-        recognition.onerror = (event: any) => {
-          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-            wantListeningRef.current = false;
-            setIsListening(false);
-            setSpeechError("Microphone access is blocked. Allow it in your browser settings.");
-          } else if (event.error === "audio-capture") {
-            wantListeningRef.current = false;
-            setIsListening(false);
-            setSpeechError("No microphone found.");
-          } else if (event.error === "network") {
-            wantListeningRef.current = false;
-            setIsListening(false);
-            setSpeechError("Voice input needs an internet connection.");
-          } else if (event.error === "no-speech" || event.error === "aborted") {
-            // Ignore silently
-          } else {
-            wantListeningRef.current = false;
-            setIsListening(false);
-            setSpeechError("Voice input stopped.");
-          }
-        };
-
-        recognition.onend = () => {
-          if (wantListeningRef.current) {
-            baseRef.current = valueRef.current;
-            finalRef.current = "";
-            try {
-              recognition.start();
-              return;
-            } catch {
-              wantListeningRef.current = false;
-              setIsListening(false);
-            }
-          } else {
-            setIsListening(false);
-          }
-        };
-
-        recognitionRef.current = recognition;
-      }
-
-      recognitionRef.current.start();
-    } catch {
-      // If recognition is already starting or running, ignore or retry
-      try {
-        recognitionRef.current?.start();
-      } catch {
-        // ignore
-      }
-    }
-  };
-
-  const toggleListening = () => {
-    if (isListening || wantListeningRef.current) {
-      stopListening();
-    } else {
-      startListening();
-    }
-  };
-
   const handleSubmitAnswer = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!session || !activeTurn || isSubmittingAnswer) return;
 
-    wantListeningRef.current = false;
-    setIsListening(false);
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch {
-        // ignore
-      }
-    }
+    speech.stop();
 
     const trimmed = currentAnswer.trim();
     if (!trimmed) {
@@ -268,9 +111,6 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
       );
 
       setCurrentAnswer("");
-      valueRef.current = "";
-      baseRef.current = "";
-      finalRef.current = "";
 
       if (evaluation.is_complete) {
         router.push(`/interview/${sessionId}/report`);
@@ -288,15 +128,7 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
   };
 
   const handleEndEarly = async () => {
-    wantListeningRef.current = false;
-    setIsListening(false);
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch {
-        // ignore
-      }
-    }
+    speech.stop();
 
     setIsEndingSession(true);
     setShowEndDialog(false);
@@ -480,10 +312,7 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
                   <textarea
                     ref={answerTextareaRef}
                     value={currentAnswer}
-                    onChange={(e) => {
-                      setCurrentAnswer(e.target.value);
-                      valueRef.current = e.target.value;
-                    }}
+                    onChange={(e) => setCurrentAnswer(e.target.value)}
                     disabled={isSubmittingAnswer}
                     rows={6}
                     placeholder="Type your answer here, or click the mic to speak..."
@@ -499,7 +328,7 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
                   {/* Inside bottom controls: Listening status on left, mic button on right */}
                   <div className="pointer-events-none absolute bottom-2.5 left-3 right-3 flex items-center justify-between">
                     <div className="pointer-events-auto">
-                      {isListening && (
+                      {speech.listening && (
                         <span className="flex items-center gap-1.5 text-xs text-primary font-medium animate-pulse">
                           <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping" />
                           Listening...
@@ -508,20 +337,20 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
                     </div>
 
                     <div className="pointer-events-auto">
-                      {speechSupported ? (
+                      {speech.supported ? (
                         <button
                           type="button"
-                          onClick={toggleListening}
+                          onClick={speech.toggle}
                           disabled={isSubmittingAnswer}
-                          aria-label={isListening ? "Stop voice input" : "Start voice input"}
-                          title={isListening ? "Stop voice input" : "Start voice input"}
+                          aria-label={speech.listening ? "Stop voice input" : "Start voice input"}
+                          title={speech.listening ? "Stop voice input" : "Start voice input"}
                           className={`flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 ${
-                            isListening
+                            speech.listening
                               ? "bg-primary text-primary-foreground shadow-sm ring-4 ring-primary/20 animate-pulse"
                               : "text-muted-foreground hover:text-foreground hover:bg-muted/80 bg-background border border-border/60 shadow-xs"
                           }`}
                         >
-                          {isListening ? (
+                          {speech.listening ? (
                             <Square className="h-3.5 w-3.5 fill-current" />
                           ) : (
                             <Mic className="h-4 w-4" />
@@ -542,8 +371,8 @@ export function InterviewSessionView({ sessionId }: InterviewSessionViewProps) {
                   </div>
                 </div>
 
-                {speechError && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 px-1 pt-1">{speechError}</p>
+                {speech.error && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 px-1 pt-1">{speech.error}</p>
                 )}
               </div>
             </CardContent>
